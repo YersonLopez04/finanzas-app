@@ -3,16 +3,16 @@
 import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
-import { getTransactions, addTransaction, updateTransaction, deleteTransaction } from '@/lib/db';
+import { getTransactions, addTransaction, updateTransaction, deleteTransaction, getCategories, addCategory, deleteCategory } from '@/lib/db';
 import { getCurrentMonthId, formatCurrency, todayISO } from '@/lib/utils';
 import { MonthPicker } from '@/components/layout/MonthPicker';
 import { Card, CardBody, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
-import type { Transaction, PaymentMethod } from '@/types';
-import { DEFAULT_CATEGORIES, PAYMENT_METHODS } from '@/types';
-import { Plus, Trash2, X, Pencil, Users, CreditCard, Smartphone, Banknote } from 'lucide-react';
+import type { Transaction, PaymentMethod, Category } from '@/types';
+import { PAYMENT_METHODS } from '@/types';
+import { Plus, Trash2, X, Pencil, Users, CreditCard, Smartphone, Banknote, Settings2 } from 'lucide-react';
 
 const CAT_COLORS: Record<string, string> = {
   Comida: 'bg-amber-100 text-amber-700',
@@ -31,11 +31,11 @@ const PAYMENT_ICONS: Record<PaymentMethod, typeof CreditCard> = {
   efectivo: Banknote,
 };
 
-function emptyForm() {
+function emptyForm(defaultCategory: string) {
   return {
     date: todayISO(),
     amount: '',
-    category: DEFAULT_CATEGORIES[0],
+    category: defaultCategory,
     description: '',
     paymentMethod: '' as PaymentMethod | '',
     shared: false,
@@ -60,6 +60,9 @@ function GastosVariablesContent() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(() => searchParams.get('quick') === '1');
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [showCategoryManager, setShowCategoryManager] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
 
   useEffect(() => {
     if (searchParams.get('quick') === '1') {
@@ -68,21 +71,34 @@ function GastosVariablesContent() {
   }, [searchParams, router]);
 
   // form
-  const [form, setForm] = useState(emptyForm());
+  const [form, setForm] = useState(emptyForm(''));
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (!user) return;
     setLoading(true);
-    getTransactions(user.id, monthId).then((data) => {
-      setTransactions(data);
+    Promise.all([getTransactions(user.id, monthId), getCategories(user.id)]).then(([txs, cats]) => {
+      setTransactions(txs);
+      setCategories(cats);
       setLoading(false);
     });
   }, [user, monthId]);
 
+  async function handleAddCategory() {
+    if (!user || !newCategoryName.trim()) return;
+    await addCategory(user.id, newCategoryName.trim(), categories.length);
+    setCategories(await getCategories(user.id));
+    setNewCategoryName('');
+  }
+
+  async function handleDeleteCategory(id: string) {
+    await deleteCategory(id);
+    setCategories((prev) => prev.filter((c) => c.id !== id));
+  }
+
   function openNewForm() {
     setEditingId(null);
-    setForm(emptyForm());
+    setForm(emptyForm(categories[0]?.name ?? ''));
     setShowForm(true);
   }
 
@@ -134,10 +150,12 @@ function GastosVariablesContent() {
   const total = transactions.reduce((s, t) => s + t.amount, 0);
 
   // group by category
-  const byCategory = DEFAULT_CATEGORIES.map((cat) => ({
-    cat,
-    total: transactions.filter((t) => t.category === cat).reduce((s, t) => s + t.amount, 0),
-  })).filter((x) => x.total > 0);
+  const byCategory = categories
+    .map(({ name: cat }) => ({
+      cat,
+      total: transactions.filter((t) => t.category === cat).reduce((s, t) => s + t.amount, 0),
+    }))
+    .filter((x) => x.total > 0);
 
   if (loading) return <div className="text-stone-400 text-sm mt-8 text-center">Cargando...</div>;
 
@@ -145,8 +163,54 @@ function GastosVariablesContent() {
     <div className="max-w-2xl mx-auto flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-semibold text-stone-800">Gastos Variables</h1>
-        <MonthPicker monthId={monthId} onChange={setMonthId} />
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowCategoryManager((p) => !p)}
+            className="text-stone-400 hover:text-stone-700 transition-colors p-1.5 rounded-full hover:bg-stone-100"
+            title="Editar categorías"
+          >
+            <Settings2 size={16} />
+          </button>
+          <MonthPicker monthId={monthId} onChange={setMonthId} />
+        </div>
       </div>
+
+      {/* Gestión de categorías */}
+      {showCategoryManager && (
+        <Card>
+          <CardHeader>
+            <p className="text-sm font-semibold text-stone-700">Tus categorías</p>
+          </CardHeader>
+          <CardBody className="flex flex-col gap-3">
+            <div className="flex flex-wrap gap-2">
+              {categories.map((c) => (
+                <span
+                  key={c.id}
+                  className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-stone-100 text-stone-600"
+                >
+                  {c.name}
+                  <button onClick={() => handleDeleteCategory(c.id)} className="text-stone-400 hover:text-red-500">
+                    <X size={11} />
+                  </button>
+                </span>
+              ))}
+              {categories.length === 0 && <p className="text-sm text-stone-400">Aún no tienes categorías.</p>}
+            </div>
+            <div className="flex items-center gap-2">
+              <Input
+                value={newCategoryName}
+                onChange={(e) => setNewCategoryName(e.target.value)}
+                placeholder="Nueva categoría (ej. Mascotas)"
+                onKeyDown={(e) => e.key === 'Enter' && handleAddCategory()}
+                className="flex-1"
+              />
+              <Button size="sm" onClick={handleAddCategory} disabled={!newCategoryName.trim()}>
+                <Plus size={14} className="mr-1" /> Agregar
+              </Button>
+            </div>
+          </CardBody>
+        </Card>
+      )}
 
       {/* Totales por categoría */}
       {byCategory.length > 0 && (
@@ -199,7 +263,7 @@ function GastosVariablesContent() {
                 label="Categoría"
                 value={form.category}
                 onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
-                options={DEFAULT_CATEGORIES.map((c) => ({ value: c, label: c }))}
+                options={categories.map((c) => ({ value: c.name, label: c.name }))}
               />
               <Select
                 label="Método de pago"

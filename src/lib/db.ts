@@ -1,5 +1,6 @@
 import { getSupabase } from './supabase';
-import type { MonthData, Transaction, Account, AccountMovement } from '@/types';
+import type { MonthData, Transaction, Account, AccountMovement, Category } from '@/types';
+import { DEFAULT_CATEGORIES } from '@/types';
 
 const DEMO_MODE = !process.env.NEXT_PUBLIC_SUPABASE_URL;
 
@@ -9,6 +10,7 @@ const demoStore: {
   transactions: Transaction[];
   accounts: Account[];
   movements: AccountMovement[];
+  categories: Category[];
 } = {
   months: {
     '2026-06': {
@@ -44,6 +46,7 @@ const demoStore: {
     { id: 'a4', userId: 'demo-user', name: 'Fondo mamá', currency: 'PEN', type: 'fund', balance: 1200, note: 'aporte mensual', order: 3, createdAt: '' },
   ],
   movements: [],
+  categories: DEFAULT_CATEGORIES.map((name, i) => ({ id: `c${i}`, name, order: i })),
 };
 
 function sb() {
@@ -389,4 +392,44 @@ export async function deleteMovement(id: string) {
     return;
   }
   await sb().from('account_movements').delete().eq('id', id);
+}
+
+// ── Categorías ────────────────────────────────────────────────────────────────
+
+interface CategoryRow { id: string; name: string; order_index: number; }
+
+export async function getCategories(userId: string): Promise<Category[]> {
+  if (DEMO_MODE) return [...demoStore.categories].sort((a, b) => a.order - b.order);
+
+  const { data } = await sb().from('categories').select('*').eq('user_id', userId).order('order_index');
+  let rows = (data ?? []) as CategoryRow[];
+
+  // Primera vez del usuario: precarga las categorías sugeridas.
+  if (rows.length === 0) {
+    await sb()
+      .from('categories')
+      .insert(DEFAULT_CATEGORIES.map((name, i) => ({ user_id: userId, name, order_index: i })));
+    const { data: seeded } = await sb().from('categories').select('*').eq('user_id', userId).order('order_index');
+    rows = (seeded ?? []) as CategoryRow[];
+  }
+
+  return rows.map((c) => ({ id: c.id, name: c.name, order: c.order_index }));
+}
+
+export async function addCategory(userId: string, name: string, order: number): Promise<string> {
+  if (DEMO_MODE) {
+    const id = crypto.randomUUID();
+    demoStore.categories.push({ id, name, order });
+    return id;
+  }
+  const { data } = await sb().from('categories').insert({ user_id: userId, name, order_index: order }).select('id').single();
+  return data!.id as string;
+}
+
+export async function deleteCategory(id: string) {
+  if (DEMO_MODE) {
+    demoStore.categories = demoStore.categories.filter((c) => c.id !== id);
+    return;
+  }
+  await sb().from('categories').delete().eq('id', id);
 }

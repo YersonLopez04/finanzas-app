@@ -80,6 +80,15 @@ create table account_movements (
   created_at timestamptz not null default now()
 );
 
+-- ── Categorías de gastos variables (editables por usuario) ───────────────────────
+create table categories (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  name text not null,
+  order_index integer not null default 0,
+  created_at timestamptz not null default now()
+);
+
 -- ── Índices ──────────────────────────────────────────────────────────────────────
 create index idx_transactions_user_month on transactions(user_id, month_id);
 create index idx_movements_account on account_movements(account_id);
@@ -96,6 +105,7 @@ alter table fixed_expenses enable row level security;
 alter table transactions enable row level security;
 alter table accounts enable row level security;
 alter table account_movements enable row level security;
+alter table categories enable row level security;
 
 create policy "own months" on months
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
@@ -113,4 +123,7 @@ create policy "own accounts" on accounts
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
 create policy "own account_movements" on account_movements
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+create policy "own categories" on categories
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);

@@ -83,6 +83,8 @@ export interface AccountMovement {
   createdAt: string;
 }
 
+// Categorías sugeridas para precargar la cuenta de un usuario nuevo.
+// Cada usuario puede editarlas libremente desde Gastos Variables.
 export const DEFAULT_CATEGORIES = [
   'Comida',
   'Pasajes',
@@ -93,3 +95,9 @@ export const DEFAULT_CATEGORIES = [
   'Ropa',
   'Otros',
 ];
+
+export interface Category {
+  id: string;
+  name: string;
+  order: number;
+}
