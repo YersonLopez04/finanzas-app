@@ -38,13 +38,22 @@ export async function exportAllData(userId: string) {
     ),
     toCsvBlock(
       'Gastos fijos por mes',
-      ['mes', 'nombre', 'monto', 'pagado', 'fecha_pago'],
-      months.flatMap((m) => m.fixedExpenses.map((f) => [m.id, f.name, f.amount, f.paid ? 'si' : 'no', f.paidDate ?? '']))
+      ['mes', 'nombre', 'monto', 'pagado', 'fecha_pago', 'dia_pago'],
+      months.flatMap((m) => m.fixedExpenses.map((f) => [m.id, f.name, f.amount, f.paid ? 'si' : 'no', f.paidDate ?? '', f.dueDay ?? '']))
     ),
     toCsvBlock(
       'Gastos variables',
-      ['mes', 'fecha', 'categoria', 'descripcion', 'monto'],
-      transactions.map((t) => [t.monthId, t.date, t.category, t.description, t.amount])
+      ['mes', 'fecha', 'categoria', 'descripcion', 'monto', 'metodo_pago', 'compartido', 'monto_recibido'],
+      transactions.map((t) => [
+        t.monthId,
+        t.date,
+        t.category,
+        t.description,
+        t.amount,
+        t.paymentMethod ?? '',
+        t.shared ? 'si' : 'no',
+        t.reimbursedAmount ?? 0,
+      ])
     ),
     toCsvBlock(
       'Cuentas de ahorro',

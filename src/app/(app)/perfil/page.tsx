@@ -1,18 +1,23 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { getSupabase } from '@/lib/supabase';
 import { exportAllData } from '@/lib/export';
+import { importAllData, type ImportSummary } from '@/lib/import';
 import { notificationsSupported, notificationsEnabled, requestNotificationPermission } from '@/lib/notifications';
 import { Card, CardBody, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { User, Download, LogOut, Bell, BellOff } from 'lucide-react';
+import { User, Download, Upload, LogOut, Bell, BellOff } from 'lucide-react';
 
 export default function PerfilPage() {
   const { user } = useAuth();
   const [exporting, setExporting] = useState(false);
   const [notifEnabled, setNotifEnabled] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState<ImportSummary | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setNotifEnabled(notificationsEnabled());
@@ -30,6 +35,27 @@ export default function PerfilPage() {
       await exportAllData(user.id);
     } finally {
       setExporting(false);
+    }
+  }
+
+  async function handleImport(file: File) {
+    if (!user) return;
+    const confirmed = window.confirm(
+      'Esto agregará los datos del CSV a tu cuenta. Si ya tienes meses o cuentas con el mismo nombre, podrías generar duplicados. Úsalo principalmente para restaurar después de perder acceso. ¿Continuar?'
+    );
+    if (!confirmed) return;
+
+    setImporting(true);
+    setImportError(null);
+    setImportResult(null);
+    try {
+      const summary = await importAllData(user.id, file);
+      setImportResult(summary);
+    } catch {
+      setImportError('No se pudo leer el archivo. Verifica que sea un backup exportado desde esta misma app.');
+    } finally {
+      setImporting(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   }
 
@@ -87,6 +113,34 @@ export default function PerfilPage() {
             <Download size={15} className="mr-1.5" />
             {exporting ? 'Generando...' : 'Exportar a Excel (CSV)'}
           </Button>
+
+          <div className="border-t border-stone-100 pt-3 mt-1 flex flex-col gap-2">
+            <p className="text-sm text-stone-500">
+              ¿Perdiste acceso o cambiaste de cuenta? Restaura tus datos a partir de un backup CSV exportado desde aquí.
+            </p>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".csv"
+              className="hidden"
+              onChange={(e) => e.target.files?.[0] && handleImport(e.target.files[0])}
+            />
+            <Button
+              variant="secondary"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={importing}
+              className="self-start"
+            >
+              <Upload size={15} className="mr-1.5" />
+              {importing ? 'Importando...' : 'Importar backup (CSV)'}
+            </Button>
+            {importResult && (
+              <p className="text-xs text-emerald-600">
+                Listo: {importResult.months} meses, {importResult.transactions} gastos variables, {importResult.accounts} cuentas y {importResult.movements} movimientos restaurados.
+              </p>
+            )}
+            {importError && <p className="text-xs text-red-500">{importError}</p>}
+          </div>
         </CardBody>
       </Card>
 
