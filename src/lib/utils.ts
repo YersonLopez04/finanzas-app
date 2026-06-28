@@ -20,3 +20,9 @@ export function monthIdToLabel(monthId: string) {
 export function todayISO() {
   return new Date().toISOString().split('T')[0];
 }
+
+export function getPreviousMonthId(monthId: string) {
+  const [year, month] = monthId.split('-').map(Number);
+  const date = new Date(year, month - 2, 1);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+}

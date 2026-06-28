@@ -3,13 +3,13 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { getMonth, saveMonth } from '@/lib/db';
-import { getCurrentMonthId, formatCurrency } from '@/lib/utils';
+import { getCurrentMonthId, getPreviousMonthId, monthIdToLabel, formatCurrency } from '@/lib/utils';
 import { MonthPicker } from '@/components/layout/MonthPicker';
 import { Card, CardBody, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import type { MonthData, FixedExpense } from '@/types';
-import { Plus, Trash2, Check } from 'lucide-react';
+import { Plus, Trash2, Check, Copy } from 'lucide-react';
 
 function emptyExpense(): FixedExpense {
   return { id: crypto.randomUUID(), name: '', amount: 0, paid: false, order: Date.now() };
@@ -20,18 +20,36 @@ export default function GastosFijosPage() {
   const [monthId, setMonthId] = useState(getCurrentMonthId());
   const [expenses, setExpenses] = useState<FixedExpense[]>([]);
   const [monthData, setMonthData] = useState<MonthData | null>(null);
+  const [previousExpenses, setPreviousExpenses] = useState<FixedExpense[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (!user) return;
     setLoading(true);
-    getMonth(user.id, monthId).then((data) => {
-      setMonthData(data);
-      setExpenses(data?.fixedExpenses ?? []);
-      setLoading(false);
-    });
+    Promise.all([getMonth(user.id, monthId), getMonth(user.id, getPreviousMonthId(monthId))]).then(
+      ([data, prevData]) => {
+        setMonthData(data);
+        setExpenses(data?.fixedExpenses ?? []);
+        setPreviousExpenses(prevData?.fixedExpenses ?? []);
+        setLoading(false);
+      }
+    );
   }, [user, monthId]);
+
+  function copyFromPreviousMonth() {
+    setExpenses(
+      previousExpenses.map((e, i) => ({
+        id: crypto.randomUUID(),
+        name: e.name,
+        amount: e.amount,
+        dueDay: e.dueDay,
+        paid: false,
+        paidDate: undefined,
+        order: i,
+      }))
+    );
+  }
 
   async function handleSave() {
     if (!user) return;
@@ -74,6 +92,18 @@ export default function GastosFijosPage() {
         <h1 className="text-lg font-semibold text-stone-800">Gastos Fijos</h1>
         <MonthPicker monthId={monthId} onChange={setMonthId} />
       </div>
+
+      {/* Copiar del mes anterior */}
+      {expenses.length === 0 && previousExpenses.length > 0 && (
+        <div className="flex items-center justify-between gap-3 bg-sky-50 border border-sky-100 rounded-2xl px-5 py-3.5">
+          <p className="text-sm text-sky-800">
+            Tienes {previousExpenses.length} gasto{previousExpenses.length > 1 ? 's' : ''} fijo{previousExpenses.length > 1 ? 's' : ''} guardado{previousExpenses.length > 1 ? 's' : ''} en {monthIdToLabel(getPreviousMonthId(monthId))}. ¿Los copiamos a este mes?
+          </p>
+          <Button size="sm" onClick={copyFromPreviousMonth} className="shrink-0">
+            <Copy size={13} className="mr-1.5" /> Copiar
+          </Button>
+        </div>
+      )}
 
       {/* Resumen rápido */}
       {expenses.length > 0 && (
