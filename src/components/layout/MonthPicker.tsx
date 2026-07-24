@@ -19,16 +19,18 @@ export function MonthPicker({ monthId, onChange }: Props) {
     <div className="flex items-center gap-2">
       <button
         onClick={() => onChange(addMonths(monthId, -1))}
-        className="p-1.5 rounded-lg hover:bg-stone-100 text-stone-500 transition-colors"
+        aria-label="Mes anterior"
+        className="p-2 -m-0.5 rounded-lg hover:bg-stone-100 dark:hover:bg-stone-800 text-stone-500 dark:text-stone-400 transition-colors"
       >
         <ChevronLeft size={16} />
       </button>
-      <span className="text-sm font-medium text-stone-700 capitalize min-w-[140px] text-center">
+      <span className="text-sm font-medium text-stone-700 dark:text-stone-200 capitalize min-w-[140px] text-center">
         {monthIdToLabel(monthId)}
       </span>
       <button
         onClick={() => onChange(addMonths(monthId, 1))}
-        className="p-1.5 rounded-lg hover:bg-stone-100 text-stone-500 transition-colors"
+        aria-label="Mes siguiente"
+        className="p-2 -m-0.5 rounded-lg hover:bg-stone-100 dark:hover:bg-stone-800 text-stone-500 dark:text-stone-400 transition-colors"
       >
         <ChevronRight size={16} />
       </button>

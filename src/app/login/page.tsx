@@ -62,11 +62,11 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#F7F6F3]">
-      <div className="bg-white rounded-2xl border border-stone-200 shadow-sm p-8 w-full max-w-sm">
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="bg-white dark:bg-stone-900 rounded-2xl border border-stone-200 dark:border-stone-800 shadow-sm dark:shadow-none p-8 w-full max-w-sm">
         <div className="mb-8">
-          <h1 className="text-xl font-semibold text-stone-800">Finanzas</h1>
-          <p className="text-sm text-stone-400 mt-1">
+          <h1 className="text-xl font-semibold text-stone-800 dark:text-stone-100">Finanzas</h1>
+          <p className="text-sm text-stone-500 dark:text-stone-400 mt-1">
             {mode === 'login' ? 'Ingresa con tu cuenta' : 'Crea tu cuenta'}
           </p>
         </div>
@@ -85,16 +85,16 @@ export default function LoginPage() {
             onChange={(e) => setPassword(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
           />
-          {error && <p className="text-sm text-red-500">{error}</p>}
-          {info && <p className="text-sm text-emerald-600">{info}</p>}
+          {error && <p className="text-sm text-red-500 dark:text-red-400">{error}</p>}
+          {info && <p className="text-sm text-emerald-600 dark:text-emerald-400">{info}</p>}
           <Button onClick={handleSubmit} disabled={loading} className="mt-1 w-full">
             {loading ? 'Procesando...' : mode === 'login' ? 'Ingresar' : 'Crear cuenta'}
           </Button>
 
-          <div className="flex items-center gap-2 text-xs text-stone-400">
-            <div className="flex-1 h-px bg-stone-100" />
+          <div className="flex items-center gap-2 text-xs text-stone-500 dark:text-stone-400">
+            <div className="flex-1 h-px bg-stone-100 dark:bg-stone-800" />
             o
-            <div className="flex-1 h-px bg-stone-100" />
+            <div className="flex-1 h-px bg-stone-100 dark:bg-stone-800" />
           </div>
 
           <Button variant="secondary" onClick={handleGoogle} className="w-full">
@@ -107,7 +107,7 @@ export default function LoginPage() {
               setError('');
               setInfo('');
             }}
-            className="text-sm text-stone-500 hover:text-stone-700 transition-colors text-center"
+            className="text-sm text-stone-500 dark:text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 transition-colors text-center"
           >
             {mode === 'login' ? '¿No tienes cuenta? Créala aquí' : '¿Ya tienes cuenta? Inicia sesión'}
           </button>

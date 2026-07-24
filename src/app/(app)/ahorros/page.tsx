@@ -87,28 +87,36 @@ function AccountCard({
         <div className="flex items-center gap-2 px-4 py-3">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5">
-              <p className="text-sm font-semibold text-stone-800 truncate">{account.name}</p>
-              <span className="text-[10px] bg-stone-100 text-stone-500 px-1.5 py-0.5 rounded-full shrink-0">
+              <p className="text-sm font-semibold text-stone-800 dark:text-stone-100 truncate">{account.name}</p>
+              <span className="text-[10px] bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-400 px-1.5 py-0.5 rounded-full shrink-0">
                 {TYPE_LABELS[account.type]}
               </span>
             </div>
-            <p className="text-lg font-bold text-stone-900 leading-tight">
+            <p className="text-lg font-bold text-stone-900 dark:text-stone-100 leading-tight">
               {formatCurrency(account.balance, account.currency)}
             </p>
-            {account.note && <p className="text-xs text-stone-400 leading-tight">{account.note}</p>}
+            {account.note && <p className="text-xs text-stone-500 dark:text-stone-400 leading-tight">{account.note}</p>}
           </div>
-          <div className="flex items-center gap-0.5 shrink-0">
-            <button onClick={handleToggle} className="text-stone-400 hover:text-stone-600 transition-colors p-1.5">
+          <div className="flex items-center gap-1 shrink-0">
+            <button
+              onClick={handleToggle}
+              aria-label={expanded ? 'Ocultar detalles de la cuenta' : 'Ver detalles de la cuenta'}
+              className="text-stone-500 dark:text-stone-400 hover:text-stone-600 dark:hover:text-stone-200 transition-colors p-2"
+            >
               {expanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
             </button>
-            <button onClick={onDelete} className="text-stone-300 hover:text-red-400 transition-colors p-1.5">
+            <button
+              onClick={onDelete}
+              aria-label="Eliminar cuenta"
+              className="text-stone-400 dark:text-stone-600 hover:text-red-400 transition-colors p-2"
+            >
               <Trash2 size={14} />
             </button>
           </div>
         </div>
 
         {expanded && (
-          <div className="motion-pop border-t border-stone-100 px-5 py-3 flex flex-col gap-3">
+          <div className="motion-pop border-t border-stone-100 dark:border-stone-800 px-5 py-3 flex flex-col gap-3">
             {movements.length >= 2 && (() => {
               const sorted = [...movements].sort((a, b) => a.date.localeCompare(b.date));
               const baseline = account.balance - sorted.reduce((s, m) => s + m.amount, 0);
@@ -116,17 +124,17 @@ function AccountCard({
               sorted.forEach((m) => series.push((series[series.length - 1] ?? baseline) + m.amount));
               return (
                 <div>
-                  <p className="text-xs text-stone-400 mb-1">Evolución del saldo</p>
+                  <p className="text-xs text-stone-500 dark:text-stone-400 mb-1">Evolución del saldo</p>
                   <Sparkline values={series} color={account.currency === 'USD' ? '#10b981' : '#0ea5e9'} />
                 </div>
               );
             })()}
             {showMovForm ? (
-              <div className="motion-pop flex flex-col gap-2 bg-stone-50 rounded-lg p-3">
+              <div className="motion-pop flex flex-col gap-2 bg-stone-50 dark:bg-stone-800/60 rounded-lg p-3">
                 <div className="flex items-center justify-between mb-1">
-                  <p className="text-xs font-semibold text-stone-600">Nuevo movimiento</p>
-                  <button onClick={() => setShowMovForm(false)}>
-                    <X size={14} className="text-stone-400" />
+                  <p className="text-xs font-semibold text-stone-600 dark:text-stone-300">Nuevo movimiento</p>
+                  <button onClick={() => setShowMovForm(false)} aria-label="Cerrar formulario" className="p-2 -m-2">
+                    <X size={14} className="text-stone-500 dark:text-stone-400" />
                   </button>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
@@ -167,21 +175,22 @@ function AccountCard({
             )}
 
             {movements.length === 0 && (
-              <p className="text-xs text-stone-400">Sin movimientos registrados.</p>
+              <p className="text-xs text-stone-500 dark:text-stone-400">Sin movimientos registrados.</p>
             )}
             {movements.map((m) => (
               <div key={m.id} className="flex items-center justify-between text-sm">
                 <div>
-                  <span className="text-stone-400 text-xs mr-2">{m.date}</span>
-                  <span className="text-stone-600">{m.description}</span>
+                  <span className="text-stone-500 dark:text-stone-400 text-xs mr-2">{m.date}</span>
+                  <span className="text-stone-600 dark:text-stone-300">{m.description}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className={m.amount >= 0 ? 'text-emerald-600 font-medium' : 'text-red-500 font-medium'}>
+                  <span className={m.amount >= 0 ? 'text-emerald-600 dark:text-emerald-400 font-medium' : 'text-red-500 dark:text-red-400 font-medium'}>
                     {m.amount >= 0 ? '+' : ''}{formatCurrency(m.amount, account.currency)}
                   </span>
                   <button
                     onClick={() => handleDeleteMovement(m.id, m.amount)}
-                    className="text-stone-300 hover:text-red-400 transition-colors"
+                    aria-label="Eliminar movimiento"
+                    className="text-stone-400 dark:text-stone-600 hover:text-red-400 transition-colors p-2 -m-2"
                   >
                     <Trash2 size={12} />
                   </button>
@@ -278,12 +287,12 @@ export default function AhorrosPage() {
       .reduce((s, a) => s + (a.currency === 'USD' ? a.balance * exchangeRate : a.balance), 0),
   })).filter((t) => t.total > 0);
 
-  if (loading) return <div className="text-stone-400 text-sm mt-8 text-center">Cargando...</div>;
+  if (loading) return <div className="text-stone-500 dark:text-stone-400 text-sm mt-8 text-center">Cargando...</div>;
 
   return (
     <div className="max-w-2xl mx-auto flex flex-col gap-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold text-stone-800">Ahorros y Cuentas</h1>
+        <h1 className="text-lg font-semibold text-stone-800 dark:text-stone-100">Ahorros y Cuentas</h1>
       </div>
 
       {/* Patrimonio consolidado */}
@@ -323,14 +332,14 @@ export default function AhorrosPage() {
         <div className="grid grid-cols-2 gap-3">
           <Card>
             <CardBody className="py-3.5">
-              <p className="text-xs text-stone-400 mb-1">Total en Soles</p>
-              <p className="text-lg font-bold text-stone-800">{formatCurrency(totalPEN, 'PEN')}</p>
+              <p className="text-xs text-stone-500 dark:text-stone-400 mb-1">Total en Soles</p>
+              <p className="text-lg font-bold text-stone-800 dark:text-stone-100">{formatCurrency(totalPEN, 'PEN')}</p>
             </CardBody>
           </Card>
           <Card>
             <CardBody className="py-3.5">
-              <p className="text-xs text-stone-400 mb-1">Total en Dólares</p>
-              <p className="text-lg font-bold text-stone-800">{formatCurrency(totalUSD, 'USD')}</p>
+              <p className="text-xs text-stone-500 dark:text-stone-400 mb-1">Total en Dólares</p>
+              <p className="text-lg font-bold text-stone-800 dark:text-stone-100">{formatCurrency(totalUSD, 'USD')}</p>
             </CardBody>
           </Card>
         </div>
@@ -340,9 +349,9 @@ export default function AhorrosPage() {
       {showForm ? (
         <Card className="motion-pop">
           <CardHeader className="flex items-center justify-between">
-            <p className="text-sm font-semibold text-stone-700">Nueva cuenta</p>
-            <button onClick={() => setShowForm(false)}>
-              <X size={16} className="text-stone-400" />
+            <p className="text-sm font-semibold text-stone-700 dark:text-stone-200">Nueva cuenta</p>
+            <button onClick={() => setShowForm(false)} aria-label="Cerrar formulario" className="p-2 -m-2">
+              <X size={16} className="text-stone-500 dark:text-stone-400" />
             </button>
           </CardHeader>
           <CardBody className="flex flex-col gap-3">
@@ -398,7 +407,7 @@ export default function AhorrosPage() {
       {/* Lista de cuentas */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {accounts.length === 0 && (
-          <p className="text-sm text-stone-400">Sin cuentas registradas. Agrega una.</p>
+          <p className="text-sm text-stone-500 dark:text-stone-400">Sin cuentas registradas. Agrega una.</p>
         )}
         {accounts.map((account) => (
           <AccountCard

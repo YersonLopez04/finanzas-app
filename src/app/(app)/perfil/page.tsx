@@ -62,35 +62,35 @@ export default function PerfilPage() {
   return (
     <div className="max-w-2xl mx-auto flex flex-col gap-6">
       <div className="flex items-center gap-2.5">
-        <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center">
-          <User size={15} className="text-slate-600" />
+        <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+          <User size={15} className="text-slate-600 dark:text-slate-300" />
         </div>
-        <h1 className="text-lg font-semibold text-stone-800">Perfil</h1>
+        <h1 className="text-lg font-semibold text-stone-800 dark:text-stone-100">Perfil</h1>
       </div>
 
       <Card>
         <CardHeader>
-          <p className="text-sm font-semibold text-stone-700">Cuenta</p>
+          <p className="text-sm font-semibold text-stone-700 dark:text-stone-200">Cuenta</p>
         </CardHeader>
         <CardBody>
-          <p className="text-sm text-stone-600">{user?.email}</p>
+          <p className="text-sm text-stone-600 dark:text-stone-300">{user?.email}</p>
         </CardBody>
       </Card>
 
       <Card>
         <CardHeader>
-          <p className="text-sm font-semibold text-stone-700">Notificaciones</p>
+          <p className="text-sm font-semibold text-stone-700 dark:text-stone-200">Notificaciones</p>
         </CardHeader>
         <CardBody className="flex flex-col gap-3">
           {!notificationsSupported() ? (
-            <p className="text-sm text-stone-500">Tu navegador no soporta notificaciones.</p>
+            <p className="text-sm text-stone-500 dark:text-stone-400">Tu navegador no soporta notificaciones.</p>
           ) : notifEnabled ? (
-            <p className="text-sm text-emerald-600 flex items-center gap-2">
+            <p className="text-sm text-emerald-600 dark:text-emerald-400 flex items-center gap-2">
               <Bell size={15} /> Activadas — te avisaremos un día antes y el mismo día que venza un gasto fijo.
             </p>
           ) : (
             <>
-              <p className="text-sm text-stone-500">
+              <p className="text-sm text-stone-500 dark:text-stone-400">
                 Recibe un aviso 1 día antes y el mismo día en que venza un gasto fijo (necesitas definir el &quot;día de pago&quot; en cada gasto, desde Gastos Fijos).
               </p>
               <Button onClick={handleEnableNotifications} className="self-start">
@@ -103,10 +103,10 @@ export default function PerfilPage() {
 
       <Card>
         <CardHeader>
-          <p className="text-sm font-semibold text-stone-700">Backup de datos</p>
+          <p className="text-sm font-semibold text-stone-700 dark:text-stone-200">Backup de datos</p>
         </CardHeader>
         <CardBody className="flex flex-col gap-3">
-          <p className="text-sm text-stone-500">
+          <p className="text-sm text-stone-500 dark:text-stone-400">
             Descarga toda tu información (ingresos, ahorros, gastos fijos, gastos variables, cuentas y movimientos) en un archivo CSV que puedes abrir con Excel.
           </p>
           <Button onClick={handleExport} disabled={exporting} className="self-start">
@@ -114,8 +114,8 @@ export default function PerfilPage() {
             {exporting ? 'Generando...' : 'Exportar a Excel (CSV)'}
           </Button>
 
-          <div className="border-t border-stone-100 pt-3 mt-1 flex flex-col gap-2">
-            <p className="text-sm text-stone-500">
+          <div className="border-t border-stone-100 dark:border-stone-800 pt-3 mt-1 flex flex-col gap-2">
+            <p className="text-sm text-stone-500 dark:text-stone-400">
               ¿Perdiste acceso o cambiaste de cuenta? Restaura tus datos a partir de un backup CSV exportado desde aquí.
             </p>
             <input
@@ -135,11 +135,11 @@ export default function PerfilPage() {
               {importing ? 'Importando...' : 'Importar backup (CSV)'}
             </Button>
             {importResult && (
-              <p className="text-xs text-emerald-600">
+              <p className="text-xs text-emerald-600 dark:text-emerald-400">
                 Listo: {importResult.months} meses, {importResult.transactions} gastos variables, {importResult.accounts} cuentas y {importResult.movements} movimientos restaurados.
               </p>
             )}
-            {importError && <p className="text-xs text-red-500">{importError}</p>}
+            {importError && <p className="text-xs text-red-500 dark:text-red-400">{importError}</p>}
           </div>
         </CardBody>
       </Card>
@@ -148,7 +148,7 @@ export default function PerfilPage() {
         <CardBody>
           <button
             onClick={() => getSupabase().auth.signOut()}
-            className="flex items-center gap-2 text-sm text-red-500 hover:text-red-600 transition-colors"
+            className="flex items-center gap-2 text-sm text-red-500 dark:text-red-400 hover:text-red-600 dark:hover:text-red-300 transition-colors"
           >
             <LogOut size={15} />
             Cerrar sesión

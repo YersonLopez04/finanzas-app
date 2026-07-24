@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { getTransactions, addTransaction, updateTransaction, deleteTransaction, getCategories, addCategory, deleteCategory } from '@/lib/db';
 import { getCurrentMonthId, formatCurrency, todayISO } from '@/lib/utils';
+import { categoryBadgeClass } from '@/lib/categoryColors';
 import { MonthPicker } from '@/components/layout/MonthPicker';
 import { Card, CardBody, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -13,17 +14,6 @@ import { Select } from '@/components/ui/Select';
 import type { Transaction, PaymentMethod, Category } from '@/types';
 import { PAYMENT_METHODS } from '@/types';
 import { Plus, Trash2, X, Pencil, Users, CreditCard, Smartphone, Banknote, Settings2 } from 'lucide-react';
-
-const CAT_COLORS: Record<string, string> = {
-  Comida: 'bg-amber-100 text-amber-700',
-  Pasajes: 'bg-blue-100 text-blue-700',
-  Taxi: 'bg-sky-100 text-sky-700',
-  Casa: 'bg-stone-100 text-stone-600',
-  'Salidas / Ocio': 'bg-purple-100 text-purple-700',
-  Salud: 'bg-green-100 text-green-700',
-  Ropa: 'bg-rose-100 text-rose-700',
-  Otros: 'bg-gray-100 text-gray-600',
-};
 
 const PAYMENT_ICONS: Record<PaymentMethod, typeof CreditCard> = {
   tarjeta: CreditCard,
@@ -45,7 +35,7 @@ function emptyForm(defaultCategory: string) {
 
 export default function GastosVariablesPage() {
   return (
-    <Suspense fallback={<div className="text-stone-400 text-sm mt-8 text-center">Cargando...</div>}>
+    <Suspense fallback={<div className="text-stone-500 dark:text-stone-400 text-sm mt-8 text-center">Cargando...</div>}>
       <GastosVariablesContent />
     </Suspense>
   );
@@ -157,17 +147,18 @@ function GastosVariablesContent() {
     }))
     .filter((x) => x.total > 0);
 
-  if (loading) return <div className="text-stone-400 text-sm mt-8 text-center">Cargando...</div>;
+  if (loading) return <div className="text-stone-500 dark:text-stone-400 text-sm mt-8 text-center">Cargando...</div>;
 
   return (
     <div className="max-w-2xl mx-auto flex flex-col gap-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold text-stone-800">Gastos Variables</h1>
+        <h1 className="text-lg font-semibold text-stone-800 dark:text-stone-100">Gastos Variables</h1>
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowCategoryManager((p) => !p)}
-            className="text-stone-400 hover:text-stone-700 transition-colors p-1.5 rounded-full hover:bg-stone-100"
+            aria-label="Editar categorías"
             title="Editar categorías"
+            className="text-stone-500 dark:text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 transition-colors p-2 rounded-full hover:bg-stone-100 dark:hover:bg-stone-800"
           >
             <Settings2 size={16} />
           </button>
@@ -179,22 +170,26 @@ function GastosVariablesContent() {
       {showCategoryManager && (
         <Card className="motion-pop">
           <CardHeader>
-            <p className="text-sm font-semibold text-stone-700">Tus categorías</p>
+            <p className="text-sm font-semibold text-stone-700 dark:text-stone-200">Tus categorías</p>
           </CardHeader>
           <CardBody className="flex flex-col gap-3">
             <div className="flex flex-wrap gap-2">
               {categories.map((c) => (
                 <span
                   key={c.id}
-                  className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-stone-100 text-stone-600"
+                  className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-300"
                 >
                   {c.name}
-                  <button onClick={() => handleDeleteCategory(c.id)} className="text-stone-400 hover:text-red-500">
+                  <button
+                    onClick={() => handleDeleteCategory(c.id)}
+                    aria-label={`Eliminar categoría ${c.name}`}
+                    className="text-stone-500 dark:text-stone-500 hover:text-red-500 dark:hover:text-red-400 p-1 -m-1"
+                  >
                     <X size={11} />
                   </button>
                 </span>
               ))}
-              {categories.length === 0 && <p className="text-sm text-stone-400">Aún no tienes categorías.</p>}
+              {categories.length === 0 && <p className="text-sm text-stone-500 dark:text-stone-400">Aún no tienes categorías.</p>}
             </div>
             <div className="flex items-center gap-2">
               <Input
@@ -218,7 +213,7 @@ function GastosVariablesContent() {
           {byCategory.map(({ cat, total: t }) => (
             <div
               key={cat}
-              className={`px-3 py-1.5 rounded-full text-xs font-medium ${CAT_COLORS[cat] ?? 'bg-gray-100 text-gray-600'}`}
+              className={`px-3 py-1.5 rounded-full text-xs font-medium ${categoryBadgeClass(cat)}`}
             >
               {cat}: {formatCurrency(t)}
             </div>
@@ -230,13 +225,14 @@ function GastosVariablesContent() {
       {showForm ? (
         <Card className="motion-pop">
           <CardHeader className="flex items-center justify-between">
-            <p className="text-sm font-semibold text-stone-700">{editingId ? 'Editar gasto' : 'Nuevo gasto'}</p>
+            <p className="text-sm font-semibold text-stone-700 dark:text-stone-200">{editingId ? 'Editar gasto' : 'Nuevo gasto'}</p>
             <button
               onClick={() => {
                 setShowForm(false);
                 setEditingId(null);
               }}
-              className="text-stone-400 hover:text-stone-600"
+              aria-label="Cerrar formulario"
+              className="text-stone-500 dark:text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 p-2 -m-2"
             >
               <X size={16} />
             </button>
@@ -280,12 +276,12 @@ function GastosVariablesContent() {
               onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
             />
 
-            <label className="flex items-center gap-2 text-sm text-stone-600 cursor-pointer">
+            <label className="flex items-center gap-2 text-sm text-stone-600 dark:text-stone-300 cursor-pointer">
               <input
                 type="checkbox"
                 checked={form.shared}
                 onChange={(e) => setForm((f) => ({ ...f, shared: e.target.checked }))}
-                className="rounded border-stone-300"
+                className="rounded border-stone-300 dark:border-stone-600"
               />
               Gasto compartido (me deben una parte)
             </label>
@@ -325,13 +321,13 @@ function GastosVariablesContent() {
       {/* Lista de transacciones */}
       <Card>
         <CardHeader className="flex items-center justify-between">
-          <p className="text-sm font-semibold text-stone-700">
+          <p className="text-sm font-semibold text-stone-700 dark:text-stone-200">
             {transactions.length} gastos — {formatCurrency(total)} total
           </p>
         </CardHeader>
         <CardBody className="p-0">
           {transactions.length === 0 && (
-            <p className="text-sm text-stone-400 px-5 py-4">Sin gastos registrados este mes.</p>
+            <p className="text-sm text-stone-500 dark:text-stone-400 px-5 py-4">Sin gastos registrados este mes.</p>
           )}
           {transactions.map((t, i) => {
             const PaymentIcon = t.paymentMethod ? PAYMENT_ICONS[t.paymentMethod] : null;
@@ -339,52 +335,52 @@ function GastosVariablesContent() {
             return (
               <div
                 key={t.id}
-                className={`flex items-center gap-3 px-5 py-3 ${
-                  i < transactions.length - 1 ? 'border-b border-stone-50' : ''
+                className={`flex items-center gap-4 px-5 py-3 ${
+                  i < transactions.length - 1 ? 'border-b border-stone-50 dark:border-stone-800/60' : ''
                 }`}
               >
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-0.5 flex-wrap">
                     <span
-                      className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                        CAT_COLORS[t.category] ?? 'bg-gray-100 text-gray-600'
-                      }`}
+                      className={`text-xs px-2 py-0.5 rounded-full font-medium ${categoryBadgeClass(t.category)}`}
                     >
                       {t.category}
                     </span>
                     {PaymentIcon && (
-                      <span className="flex items-center gap-1 text-xs text-stone-400">
+                      <span className="flex items-center gap-1 text-xs text-stone-500 dark:text-stone-400">
                         <PaymentIcon size={12} />
                       </span>
                     )}
                     {t.shared && (
-                      <span className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium bg-indigo-50 text-indigo-600">
+                      <span className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium bg-indigo-50 dark:bg-indigo-500/15 text-indigo-600 dark:text-indigo-400">
                         <Users size={11} /> Compartido
                       </span>
                     )}
-                    <span className="text-xs text-stone-400">{t.date}</span>
+                    <span className="text-xs text-stone-500 dark:text-stone-400">{t.date}</span>
                   </div>
                   {t.description && (
-                    <p className="text-sm text-stone-600 truncate">{t.description}</p>
+                    <p className="text-sm text-stone-600 dark:text-stone-300 truncate">{t.description}</p>
                   )}
                   {t.shared && (
-                    <p className={`text-xs mt-0.5 ${pending > 0 ? 'text-amber-600' : 'text-emerald-600'}`}>
+                    <p className={`text-xs mt-0.5 ${pending > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
                       {pending > 0 ? `Te deben ${formatCurrency(pending)}` : 'Ya te pagaron todo'}
                     </p>
                   )}
                 </div>
-                <p className="text-sm font-semibold text-stone-700 shrink-0">
+                <p className="text-sm font-semibold text-stone-700 dark:text-stone-200 shrink-0">
                   {formatCurrency(t.amount)}
                 </p>
                 <button
                   onClick={() => openEditForm(t)}
-                  className="text-stone-300 hover:text-slate-500 transition-colors shrink-0"
+                  aria-label="Editar gasto"
+                  className="text-stone-400 dark:text-stone-600 hover:text-slate-500 dark:hover:text-slate-400 transition-colors shrink-0 p-2 -m-2"
                 >
                   <Pencil size={14} />
                 </button>
                 <button
                   onClick={() => handleDelete(t.id)}
-                  className="text-stone-300 hover:text-red-400 transition-colors shrink-0"
+                  aria-label="Eliminar gasto"
+                  className="text-stone-400 dark:text-stone-600 hover:text-red-400 transition-colors shrink-0 p-2 -m-2"
                 >
                   <Trash2 size={14} />
                 </button>

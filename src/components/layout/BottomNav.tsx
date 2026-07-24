@@ -19,10 +19,10 @@ function NavLink({ href, label, icon: Icon, active }: { href: string; label: str
     <Link
       href={href}
       className={`flex-1 flex flex-col items-center gap-1 py-2.5 text-[11px] transition-colors ${
-        active ? 'text-slate-800 font-semibold' : 'text-stone-400'
+        active ? 'text-slate-800 dark:text-slate-100 font-semibold' : 'text-stone-500 dark:text-stone-400'
       }`}
     >
-      <div className={`rounded-full p-1.5 transition-colors ${active ? 'bg-slate-100' : ''}`}>
+      <div className={`rounded-full p-1.5 transition-colors ${active ? 'bg-slate-100 dark:bg-slate-800' : ''}`}>
         <Icon size={19} strokeWidth={active ? 2.3 : 1.8} />
       </div>
       {label}
@@ -33,7 +33,7 @@ function NavLink({ href, label, icon: Icon, active }: { href: string; label: str
 export function BottomNav() {
   const pathname = usePathname();
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-stone-100 flex items-center md:hidden z-50 shadow-[0_-4px_16px_rgba(41,37,36,0.04)]">
+    <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-stone-900 border-t border-stone-100 dark:border-stone-800 flex items-center md:hidden z-50 shadow-[0_-4px_16px_rgba(41,37,36,0.04)]">
       {leftNav.map((item) => (
         <NavLink key={item.href} {...item} active={pathname.startsWith(item.href)} />
       ))}

@@ -84,19 +84,19 @@ export default function GastosFijosPage() {
   const paid = expenses.filter((e) => e.paid).reduce((s, e) => s + (e.amount || 0), 0);
   const pending = total - paid;
 
-  if (loading) return <div className="text-stone-400 text-sm mt-8 text-center">Cargando...</div>;
+  if (loading) return <div className="text-stone-500 dark:text-stone-400 text-sm mt-8 text-center">Cargando...</div>;
 
   return (
     <div className="max-w-2xl mx-auto flex flex-col gap-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold text-stone-800">Gastos Fijos</h1>
+        <h1 className="text-lg font-semibold text-stone-800 dark:text-stone-100">Gastos Fijos</h1>
         <MonthPicker monthId={monthId} onChange={setMonthId} />
       </div>
 
       {/* Copiar del mes anterior */}
       {expenses.length === 0 && previousExpenses.length > 0 && (
-        <div className="flex items-center justify-between gap-3 bg-sky-50 border border-sky-100 rounded-2xl px-5 py-3.5">
-          <p className="text-sm text-sky-800">
+        <div className="flex items-center justify-between gap-3 bg-sky-50 dark:bg-sky-500/10 border border-sky-100 dark:border-sky-500/20 rounded-2xl px-5 py-3.5">
+          <p className="text-sm text-sky-800 dark:text-sky-300">
             Tienes {previousExpenses.length} gasto{previousExpenses.length > 1 ? 's' : ''} fijo{previousExpenses.length > 1 ? 's' : ''} guardado{previousExpenses.length > 1 ? 's' : ''} en {monthIdToLabel(getPreviousMonthId(monthId))}. ¿Los copiamos a este mes?
           </p>
           <Button size="sm" onClick={copyFromPreviousMonth} className="shrink-0">
@@ -109,12 +109,12 @@ export default function GastosFijosPage() {
       {expenses.length > 0 && (
         <div className="grid grid-cols-3 gap-3">
           {[
-            { label: 'Total', value: total, color: 'text-stone-700' },
-            { label: 'Pagado', value: paid, color: 'text-emerald-600' },
-            { label: 'Pendiente', value: pending, color: pending > 0 ? 'text-amber-600' : 'text-stone-400' },
+            { label: 'Total', value: total, color: 'text-stone-700 dark:text-stone-200' },
+            { label: 'Pagado', value: paid, color: 'text-emerald-600 dark:text-emerald-400' },
+            { label: 'Pendiente', value: pending, color: pending > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-stone-500 dark:text-stone-400' },
           ].map(({ label, value, color }) => (
-            <div key={label} className="bg-white rounded-xl border border-stone-200 px-4 py-3">
-              <p className="text-xs text-stone-400 mb-1">{label}</p>
+            <div key={label} className="bg-white dark:bg-stone-900 rounded-xl border border-stone-200 dark:border-stone-800 px-4 py-3">
+              <p className="text-xs text-stone-500 dark:text-stone-400 mb-1">{label}</p>
               <p className={`text-base font-semibold ${color}`}>{formatCurrency(value)}</p>
             </div>
           ))}
@@ -123,28 +123,29 @@ export default function GastosFijosPage() {
 
       <Card>
         <CardHeader className="flex items-center justify-between">
-          <p className="text-sm font-semibold text-stone-700">Pagos del mes</p>
+          <p className="text-sm font-semibold text-stone-700 dark:text-stone-200">Pagos del mes</p>
           <Button size="sm" variant="ghost" onClick={() => setExpenses((p) => [...p, emptyExpense()])}>
             <Plus size={14} className="mr-1" /> Agregar
           </Button>
         </CardHeader>
         <CardBody className="flex flex-col gap-2">
           {expenses.length === 0 && (
-            <p className="text-sm text-stone-400">Sin gastos fijos. Agrega uno.</p>
+            <p className="text-sm text-stone-500 dark:text-stone-400">Sin gastos fijos. Agrega uno.</p>
           )}
           {expenses.map((e) => (
             <div
               key={e.id}
               className={`flex items-center gap-2 p-2 rounded-lg transition-colors ${
-                e.paid ? 'bg-emerald-50' : 'bg-white'
+                e.paid ? 'bg-emerald-50 dark:bg-emerald-500/10' : 'bg-white dark:bg-transparent'
               }`}
             >
               <button
                 onClick={() => togglePaid(e.id)}
+                aria-label={e.paid ? 'Marcar como pendiente' : 'Marcar como pagado'}
                 className={`shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${
                   e.paid
                     ? 'bg-emerald-500 border-emerald-500 text-white'
-                    : 'border-stone-300 hover:border-emerald-400'
+                    : 'border-stone-300 dark:border-stone-600 hover:border-emerald-400 dark:hover:border-emerald-500'
                 }`}
               >
                 {e.paid && <Check size={12} />}
@@ -153,7 +154,7 @@ export default function GastosFijosPage() {
                 value={e.name}
                 onChange={(ev) => updateExpense(e.id, 'name', ev.target.value)}
                 placeholder="Nombre del gasto"
-                className={`flex-1 min-w-0 ${e.paid ? 'line-through text-stone-400' : ''}`}
+                className={`flex-1 min-w-0 ${e.paid ? 'line-through text-stone-500 dark:text-stone-400' : ''}`}
               />
               <Input
                 type="number"
@@ -177,7 +178,8 @@ export default function GastosFijosPage() {
               />
               <button
                 onClick={() => removeExpense(e.id)}
-                className="text-stone-300 hover:text-red-400 transition-colors shrink-0"
+                aria-label="Eliminar gasto fijo"
+                className="text-stone-400 dark:text-stone-600 hover:text-red-400 transition-colors shrink-0 p-2 -m-2"
               >
                 <Trash2 size={15} />
               </button>
