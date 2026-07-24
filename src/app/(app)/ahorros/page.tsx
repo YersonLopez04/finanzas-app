@@ -108,7 +108,7 @@ function AccountCard({
         </div>
 
         {expanded && (
-          <div className="border-t border-stone-100 px-5 py-3 flex flex-col gap-3">
+          <div className="motion-pop border-t border-stone-100 px-5 py-3 flex flex-col gap-3">
             {movements.length >= 2 && (() => {
               const sorted = [...movements].sort((a, b) => a.date.localeCompare(b.date));
               const baseline = account.balance - sorted.reduce((s, m) => s + m.amount, 0);
@@ -122,7 +122,7 @@ function AccountCard({
               );
             })()}
             {showMovForm ? (
-              <div className="flex flex-col gap-2 bg-stone-50 rounded-lg p-3">
+              <div className="motion-pop flex flex-col gap-2 bg-stone-50 rounded-lg p-3">
                 <div className="flex items-center justify-between mb-1">
                   <p className="text-xs font-semibold text-stone-600">Nuevo movimiento</p>
                   <button onClick={() => setShowMovForm(false)}>
@@ -338,7 +338,7 @@ export default function AhorrosPage() {
 
       {/* Formulario nueva cuenta */}
       {showForm ? (
-        <Card>
+        <Card className="motion-pop">
           <CardHeader className="flex items-center justify-between">
             <p className="text-sm font-semibold text-stone-700">Nueva cuenta</p>
             <button onClick={() => setShowForm(false)}>

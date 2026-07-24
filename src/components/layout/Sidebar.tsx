@@ -32,7 +32,7 @@ export function Sidebar() {
             <Link
               key={href}
               href={href}
-              className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm transition-all ${
+              className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm transition-colors ${
                 active
                   ? 'bg-slate-800 text-white font-medium shadow-sm shadow-slate-800/20'
                   : 'text-stone-500 hover:bg-stone-50 hover:text-stone-800'
@@ -47,7 +47,7 @@ export function Sidebar() {
       <div className="px-3 py-5 flex flex-col gap-1">
         <Link
           href="/perfil"
-          className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm transition-all ${
+          className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm transition-colors ${
             pathname.startsWith('/perfil')
               ? 'bg-slate-800 text-white font-medium shadow-sm shadow-slate-800/20'
               : 'text-stone-500 hover:bg-stone-50 hover:text-stone-800'

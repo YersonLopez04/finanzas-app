@@ -177,7 +177,7 @@ function GastosVariablesContent() {
 
       {/* Gestión de categorías */}
       {showCategoryManager && (
-        <Card>
+        <Card className="motion-pop">
           <CardHeader>
             <p className="text-sm font-semibold text-stone-700">Tus categorías</p>
           </CardHeader>
@@ -228,7 +228,7 @@ function GastosVariablesContent() {
 
       {/* Formulario nuevo / editar gasto */}
       {showForm ? (
-        <Card>
+        <Card className="motion-pop">
           <CardHeader className="flex items-center justify-between">
             <p className="text-sm font-semibold text-stone-700">{editingId ? 'Editar gasto' : 'Nuevo gasto'}</p>
             <button

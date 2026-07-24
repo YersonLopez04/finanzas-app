@@ -151,8 +151,8 @@ export default function DashboardPage() {
           <div className="mt-5 relative">
             <div className="h-2 bg-white/15 rounded-full overflow-hidden">
               <div
-                className={`h-full rounded-full transition-all ${remaining < 0 ? 'bg-rose-300' : 'bg-emerald-300'}`}
-                style={{ width: `${Math.min(Math.max(((totalIncome - remaining) / totalIncome) * 100, 0), 100)}%` }}
+                className={`h-full w-full rounded-full origin-left transition-transform duration-200 ease-out ${remaining < 0 ? 'bg-rose-300' : 'bg-emerald-300'}`}
+                style={{ transform: `scaleX(${Math.min(Math.max((totalIncome - remaining) / totalIncome, 0), 1)})` }}
               />
             </div>
             <div className="flex justify-between text-[11px] text-slate-300 mt-1.5">
@@ -167,7 +167,7 @@ export default function DashboardPage() {
       {isCurrentMonth && dueToday.length > 0 && (
         <Link
           href="/gastos-fijos"
-          className="flex items-center justify-between gap-3 bg-rose-50 border border-rose-100 rounded-2xl px-5 py-3.5 hover:bg-rose-100/60 transition-colors"
+          className="motion-pop flex items-center justify-between gap-3 bg-rose-50 border border-rose-100 rounded-2xl px-5 py-3.5 hover:bg-rose-100/60 transition-colors"
         >
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-full bg-rose-100 flex items-center justify-center shrink-0">
@@ -183,7 +183,7 @@ export default function DashboardPage() {
       {isCurrentMonth && dueTomorrow.length > 0 && (
         <Link
           href="/gastos-fijos"
-          className="flex items-center justify-between gap-3 bg-amber-50 border border-amber-100 rounded-2xl px-5 py-3.5 hover:bg-amber-100/60 transition-colors"
+          className="motion-pop flex items-center justify-between gap-3 bg-amber-50 border border-amber-100 rounded-2xl px-5 py-3.5 hover:bg-amber-100/60 transition-colors"
         >
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
@@ -199,7 +199,7 @@ export default function DashboardPage() {
       {isCurrentMonth && pendingFixed.length > 0 && (
         <Link
           href="/gastos-fijos"
-          className="flex items-center justify-between gap-3 bg-stone-50 border border-stone-100 rounded-2xl px-5 py-3.5 hover:bg-stone-100/60 transition-colors"
+          className="motion-pop flex items-center justify-between gap-3 bg-stone-50 border border-stone-100 rounded-2xl px-5 py-3.5 hover:bg-stone-100/60 transition-colors"
         >
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-full bg-stone-100 flex items-center justify-center shrink-0">
@@ -349,8 +349,8 @@ export default function DashboardPage() {
                 </div>
                 <div className="h-2 bg-stone-100 rounded-full overflow-hidden">
                   <div
-                    className={`h-full ${color} rounded-full transition-all`}
-                    style={{ width: `${Math.min(pct(value), 100)}%` }}
+                    className={`h-full w-full ${color} rounded-full origin-left transition-transform duration-200 ease-out`}
+                    style={{ transform: `scaleX(${Math.min(pct(value), 100) / 100})` }}
                   />
                 </div>
               </div>

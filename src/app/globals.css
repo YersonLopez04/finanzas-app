@@ -3,6 +3,7 @@
 :root {
   --background: #F7F6F3;
   --foreground: #1C1C1C;
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
 }
 
 body {
@@ -13,4 +14,29 @@ body {
 
 * {
   box-sizing: border-box;
+}
+
+/* Entrada para paneles condicionales (formularios, secciones expandibles). */
+.motion-pop {
+  transition: opacity 200ms var(--ease-out), transform 200ms var(--ease-out);
+  transform-origin: top;
+}
+
+@starting-style {
+  .motion-pop {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .motion-pop {
+    transition-property: opacity;
+  }
+
+  @starting-style {
+    .motion-pop {
+      transform: none;
+    }
+  }
 }
