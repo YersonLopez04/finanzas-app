@@ -25,7 +25,20 @@ export interface FixedExpense {
   paid: boolean;
   paidDate?: string;
   dueDay?: number; // día del mes en que vence (1-31), opcional
+  tracked?: boolean; // true = presupuesto que se gasta gradualmente (ver FixedExpenseEntry)
   order: number;
+}
+
+// Carga individual registrada contra un gasto fijo en modo seguimiento
+// (ej. cada carga de gasolina contra el presupuesto mensual de S/200).
+export interface FixedExpenseEntry {
+  id: string;
+  fixedExpenseId: string;
+  userId: string;
+  date: string; // ISO
+  amount: number;
+  note?: string;
+  createdAt: string;
 }
 
 export interface MonthData {

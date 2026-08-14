@@ -50,8 +50,20 @@ create table fixed_expenses (
   paid boolean not null default false,
   paid_date date,
   due_day smallint, -- día del mes en que vence (1-31), opcional
+  tracked boolean not null default false, -- true = presupuesto que se gasta gradualmente (ver fixed_expense_entries)
   order_index integer not null default 0,
   foreign key (user_id, month_id) references months(user_id, id) on delete cascade
+);
+
+-- ── Cargas registradas contra un gasto fijo en modo seguimiento (tracked) ────────
+create table fixed_expense_entries (
+  id uuid primary key default gen_random_uuid(),
+  fixed_expense_id uuid not null references fixed_expenses(id) on delete cascade,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  date date not null,
+  amount numeric not null default 0,
+  note text not null default '',
+  created_at timestamptz not null default now()
 );
 
 -- ── Gastos variables (transacciones) ────────────────────────────────────────────
@@ -94,6 +106,7 @@ create index idx_transactions_user_month on transactions(user_id, month_id);
 create index idx_movements_account on account_movements(account_id);
 create index idx_savings_month on savings_allocations(user_id, month_id);
 create index idx_fixed_month on fixed_expenses(user_id, month_id);
+create index idx_fixed_expense_entries_expense on fixed_expense_entries(fixed_expense_id);
 
 -- ════════════════════════════════════════════════════════════════════════════
 -- Row Level Security: cada usuario solo ve y edita sus propios datos
@@ -102,6 +115,7 @@ create index idx_fixed_month on fixed_expenses(user_id, month_id);
 alter table months enable row level security;
 alter table savings_allocations enable row level security;
 alter table fixed_expenses enable row level security;
+alter table fixed_expense_entries enable row level security;
 alter table transactions enable row level security;
 alter table accounts enable row level security;
 alter table account_movements enable row level security;
@@ -114,6 +128,9 @@ create policy "own savings_allocations" on savings_allocations
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
 create policy "own fixed_expenses" on fixed_expenses
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+create policy "own fixed_expense_entries" on fixed_expense_entries
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
 create policy "own transactions" on transactions

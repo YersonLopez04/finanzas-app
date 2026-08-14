@@ -1,5 +1,5 @@
 import { getSupabase } from './supabase';
-import type { MonthData, Transaction, Account, AccountMovement, Category } from '@/types';
+import type { MonthData, Transaction, Account, AccountMovement, Category, FixedExpenseEntry } from '@/types';
 import { DEFAULT_CATEGORIES } from '@/types';
 
 const DEMO_MODE = !process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -11,6 +11,7 @@ const demoStore: {
   accounts: Account[];
   movements: AccountMovement[];
   categories: Category[];
+  fixedExpenseEntries: FixedExpenseEntry[];
 } = {
   months: {
     '2026-06': {
@@ -29,6 +30,7 @@ const demoStore: {
         { id: '6', name: 'Cuota Terreno', amount: 481, paid: false, order: 6 },
         { id: '7', name: 'Seguro Depa', amount: 180, paid: true, order: 7 },
         { id: '8', name: 'Internet SMP', amount: 100, paid: false, order: 8 },
+        { id: '9', name: 'Gasolina', amount: 200, paid: false, tracked: true, order: 9 },
       ],
       createdAt: new Date().toISOString(),
     },
@@ -47,6 +49,11 @@ const demoStore: {
   ],
   movements: [],
   categories: DEFAULT_CATEGORIES.map((name, i) => ({ id: `c${i}`, name, order: i })),
+  fixedExpenseEntries: [
+    { id: 'fe1', fixedExpenseId: '9', userId: 'demo-user', date: '2026-06-03', amount: 40, note: 'Grifo Primax', createdAt: '' },
+    { id: 'fe2', fixedExpenseId: '9', userId: 'demo-user', date: '2026-06-12', amount: 50, note: 'Grifo Repsol', createdAt: '' },
+    { id: 'fe3', fixedExpenseId: '9', userId: 'demo-user', date: '2026-06-20', amount: 30, note: 'Grifo Primax', createdAt: '' },
+  ],
 };
 
 function sb() {
@@ -54,7 +61,8 @@ function sb() {
 }
 
 interface SavingRow { id: string; name: string; amount: number | string; account_id: string | null; }
-interface FixedExpenseRow { id: string; name: string; amount: number | string; paid: boolean; paid_date: string | null; due_day: number | null; order_index: number; }
+interface FixedExpenseRow { id: string; name: string; amount: number | string; paid: boolean; paid_date: string | null; due_day: number | null; tracked: boolean | null; order_index: number; }
+interface FixedExpenseEntryRow { id: string; fixed_expense_id: string; user_id: string; date: string; amount: number | string; note: string | null; created_at: string; }
 interface TransactionRow {
   id: string;
   user_id: string;
@@ -105,6 +113,7 @@ export async function getMonth(userId: string, monthId: string): Promise<MonthDa
       paid: f.paid,
       paidDate: f.paid_date ?? undefined,
       dueDay: f.due_day ?? undefined,
+      tracked: f.tracked ?? false,
       order: f.order_index,
     })),
     createdAt: month.created_at,
@@ -144,12 +153,20 @@ export async function saveMonth(userId: string, monthId: string, data: Partial<M
     }
   }
 
-  // Replace fixed expenses
+  // Guarda gastos fijos preservando el id de cada fila (upsert en vez de
+  // borrar-todo-y-reinsertar): las cargas de seguimiento (fixed_expense_entries)
+  // referencian ese id por llave foránea y quedarían huérfanas si cambiara en
+  // cada guardado.
   if (data.fixedExpenses) {
-    await sb().from('fixed_expenses').delete().eq('user_id', userId).eq('month_id', monthId);
+    const keepIds = data.fixedExpenses.map((f) => f.id);
+    let del = sb().from('fixed_expenses').delete().eq('user_id', userId).eq('month_id', monthId);
+    if (keepIds.length > 0) del = del.not('id', 'in', `(${keepIds.join(',')})`);
+    await del;
+
     if (data.fixedExpenses.length > 0) {
-      await sb().from('fixed_expenses').insert(
+      await sb().from('fixed_expenses').upsert(
         data.fixedExpenses.map((f, i) => ({
+          id: f.id,
           user_id: userId,
           month_id: monthId,
           name: f.name,
@@ -157,6 +174,7 @@ export async function saveMonth(userId: string, monthId: string, data: Partial<M
           paid: f.paid,
           paid_date: f.paidDate ?? null,
           due_day: f.dueDay ?? null,
+          tracked: f.tracked ?? false,
           order_index: i,
         }))
       );
@@ -198,10 +216,88 @@ export async function listMonths(userId: string): Promise<MonthData[]> {
         paid: f.paid,
         paidDate: f.paid_date ?? undefined,
         dueDay: f.due_day ?? undefined,
+        tracked: f.tracked ?? false,
         order: f.order_index,
       })),
     createdAt: m.created_at,
   }));
+}
+
+// ── Cargas de gastos fijos en seguimiento ───────────────────────────────────────
+
+function mapFixedExpenseEntryRow(e: FixedExpenseEntryRow): FixedExpenseEntry {
+  return {
+    id: e.id,
+    fixedExpenseId: e.fixed_expense_id,
+    userId: e.user_id,
+    date: e.date,
+    amount: Number(e.amount),
+    note: e.note || undefined,
+    createdAt: e.created_at,
+  };
+}
+
+export async function getFixedExpenseEntries(userId: string, fixedExpenseId: string): Promise<FixedExpenseEntry[]> {
+  if (DEMO_MODE) {
+    return demoStore.fixedExpenseEntries
+      .filter((e) => e.fixedExpenseId === fixedExpenseId)
+      .sort((a, b) => b.date.localeCompare(a.date));
+  }
+  const { data } = await sb()
+    .from('fixed_expense_entries')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('fixed_expense_id', fixedExpenseId)
+    .order('date', { ascending: false });
+  return ((data ?? []) as FixedExpenseEntryRow[]).map(mapFixedExpenseEntryRow);
+}
+
+// Suma de cargas ya registradas por gasto fijo, para pintar el progreso de
+// todos los gastos en seguimiento apenas carga la página (sin tener que
+// expandir cada uno).
+export async function getFixedExpenseEntryTotals(userId: string, fixedExpenseIds: string[]): Promise<Record<string, number>> {
+  if (fixedExpenseIds.length === 0) return {};
+  if (DEMO_MODE) {
+    const totals: Record<string, number> = {};
+    demoStore.fixedExpenseEntries
+      .filter((e) => fixedExpenseIds.includes(e.fixedExpenseId))
+      .forEach((e) => {
+        totals[e.fixedExpenseId] = (totals[e.fixedExpenseId] ?? 0) + e.amount;
+      });
+    return totals;
+  }
+  const { data } = await sb()
+    .from('fixed_expense_entries')
+    .select('fixed_expense_id, amount')
+    .eq('user_id', userId)
+    .in('fixed_expense_id', fixedExpenseIds);
+  const totals: Record<string, number> = {};
+  ((data ?? []) as { fixed_expense_id: string; amount: number | string }[]).forEach((row) => {
+    totals[row.fixed_expense_id] = (totals[row.fixed_expense_id] ?? 0) + Number(row.amount);
+  });
+  return totals;
+}
+
+export async function addFixedExpenseEntry(data: Omit<FixedExpenseEntry, 'id' | 'createdAt'>) {
+  if (DEMO_MODE) {
+    demoStore.fixedExpenseEntries.unshift({ ...data, id: crypto.randomUUID(), createdAt: new Date().toISOString() });
+    return;
+  }
+  await sb().from('fixed_expense_entries').insert({
+    fixed_expense_id: data.fixedExpenseId,
+    user_id: data.userId,
+    date: data.date,
+    amount: data.amount,
+    note: data.note ?? '',
+  });
+}
+
+export async function deleteFixedExpenseEntry(id: string) {
+  if (DEMO_MODE) {
+    demoStore.fixedExpenseEntries = demoStore.fixedExpenseEntries.filter((e) => e.id !== id);
+    return;
+  }
+  await sb().from('fixed_expense_entries').delete().eq('id', id);
 }
 
 export async function getAllTransactions(userId: string): Promise<Transaction[]> {
