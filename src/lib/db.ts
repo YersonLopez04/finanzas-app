@@ -90,6 +90,7 @@ interface TransactionRow {
   payment_method: Transaction['paymentMethod'] | null;
   shared: boolean;
   reimbursed_amount: number | string;
+  my_share: number | string | null;
   created_at: string;
 }
 interface AccountRow { id: string; user_id: string; name: string; currency: 'PEN' | 'USD'; type: Account['type']; balance: number | string; note: string | null; order_index: number; created_at: string; }
@@ -354,6 +355,7 @@ function mapTransactionRow(t: TransactionRow): Transaction {
     paymentMethod: t.payment_method ?? undefined,
     shared: t.shared,
     reimbursedAmount: Number(t.reimbursed_amount ?? 0),
+    myShare: t.my_share == null ? null : Number(t.my_share),
     createdAt: t.created_at,
   };
 }
@@ -388,6 +390,7 @@ export async function addTransaction(data: Omit<Transaction, 'id' | 'createdAt'>
       payment_method: data.paymentMethod ?? null,
       shared: data.shared ?? false,
       reimbursed_amount: data.reimbursedAmount ?? 0,
+      my_share: data.myShare ?? null,
     }),
     'guardar el gasto'
   );
@@ -407,6 +410,7 @@ export async function updateTransaction(id: string, data: Partial<Omit<Transacti
   if (data.paymentMethod !== undefined) row.payment_method = data.paymentMethod ?? null;
   if (data.shared !== undefined) row.shared = data.shared;
   if (data.reimbursedAmount !== undefined) row.reimbursed_amount = data.reimbursedAmount;
+  if (data.myShare !== undefined) row.my_share = data.myShare;
   check(await sb().from('transactions').update(row).eq('id', id), 'guardar el gasto');
 }
 

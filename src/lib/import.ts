@@ -150,6 +150,8 @@ export async function importAllData(userId: string, file: File): Promise<ImportS
       paymentMethod: (r.metodo_pago as PaymentMethod) || undefined,
       shared: r.compartido === 'si',
       reimbursedAmount: Number(r.monto_recibido) || 0,
+      // Backups anteriores no traen esta columna: queda sin indicar.
+      myShare: r.mi_parte ? Number(r.mi_parte) : null,
     });
   }
 

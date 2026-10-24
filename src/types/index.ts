@@ -62,6 +62,9 @@ export interface Transaction {
   paymentMethod?: PaymentMethod;
   shared?: boolean;
   reimbursedAmount?: number;
+  // Mi parte de un gasto compartido. null/ausente = no indicada (gastos
+  // anteriores): se asume que te deben el monto completo.
+  myShare?: number | null;
   createdAt: string;
 }
 

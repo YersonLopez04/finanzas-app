@@ -43,7 +43,7 @@ export async function exportAllData(userId: string) {
     ),
     toCsvBlock(
       'Gastos variables',
-      ['mes', 'fecha', 'categoria', 'descripcion', 'monto', 'metodo_pago', 'compartido', 'monto_recibido'],
+      ['mes', 'fecha', 'categoria', 'descripcion', 'monto', 'metodo_pago', 'compartido', 'monto_recibido', 'mi_parte'],
       transactions.map((t) => [
         t.monthId,
         t.date,
@@ -53,6 +53,7 @@ export async function exportAllData(userId: string) {
         t.paymentMethod ?? '',
         t.shared ? 'si' : 'no',
         t.reimbursedAmount ?? 0,
+        t.myShare ?? '',
       ])
     ),
     toCsvBlock(

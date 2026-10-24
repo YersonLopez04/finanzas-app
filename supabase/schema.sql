@@ -78,6 +78,7 @@ create table transactions (
   payment_method text, -- 'efectivo' | 'yape' | 'tarjeta', opcional
   shared boolean not null default false,
   reimbursed_amount numeric not null default 0,
+  my_share numeric, -- mi parte de un gasto compartido; null = no indicada
   created_at timestamptz not null default now()
 );
 

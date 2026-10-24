@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { getTransactions, addTransaction, updateTransaction, deleteTransaction, getCategories, addCategory, deleteCategory } from '@/lib/db';
 import { getCurrentMonthId, formatCurrency, todayISO } from '@/lib/utils';
-import { variableTotal, reimbursedTotal, costByCategory } from '@/lib/totals';
+import { variableTotal, reimbursedTotal, costByCategory, owedToYou } from '@/lib/totals';
 import { categoryBadgeClass } from '@/lib/categoryColors';
 import { MonthPicker } from '@/components/layout/MonthPicker';
 import { Card, CardBody, CardHeader } from '@/components/ui/Card';
@@ -31,6 +31,7 @@ function emptyForm(defaultCategory: string) {
     description: '',
     paymentMethod: '' as PaymentMethod | '',
     shared: false,
+    myShare: '',
     reimbursedAmount: '',
   };
 }
@@ -115,6 +116,7 @@ function GastosVariablesContent() {
       description: t.description,
       paymentMethod: t.paymentMethod ?? '',
       shared: t.shared ?? false,
+      myShare: t.myShare != null ? String(t.myShare) : '',
       reimbursedAmount: t.reimbursedAmount ? String(t.reimbursedAmount) : '',
     });
     setShowForm(true);
@@ -131,6 +133,7 @@ function GastosVariablesContent() {
       paymentMethod: form.paymentMethod || undefined,
       shared: form.shared,
       reimbursedAmount: form.shared ? Number(form.reimbursedAmount || 0) : 0,
+      myShare: form.shared && form.myShare !== '' ? Number(form.myShare) : null,
     };
 
     try {
@@ -158,6 +161,14 @@ function GastosVariablesContent() {
       reportError(err);
     }
   }
+
+  // Vista previa en el formulario, con la misma regla que la lista.
+  const formOwed = owedToYou({
+    amount: Number(form.amount || 0),
+    shared: true,
+    myShare: form.myShare !== '' ? Number(form.myShare) : null,
+    reimbursedAmount: Number(form.reimbursedAmount || 0),
+  });
 
   const total = variableTotal(transactions);
   const reimbursed = reimbursedTotal(transactions);
@@ -309,13 +320,32 @@ function GastosVariablesContent() {
             </label>
 
             {form.shared && (
-              <Input
-                label="Monto que ya me han pagado"
-                type="number"
-                value={form.reimbursedAmount}
-                onChange={(e) => setForm((f) => ({ ...f, reimbursedAmount: e.target.value }))}
-                placeholder="0.00"
-              />
+              <div className="flex flex-col gap-1.5">
+                <div className="grid grid-cols-2 gap-3">
+                  <Input
+                    label="Mi parte"
+                    type="number"
+                    inputMode="decimal"
+                    value={form.myShare}
+                    onChange={(e) => setForm((f) => ({ ...f, myShare: e.target.value }))}
+                    placeholder="0.00"
+                  />
+                  <Input
+                    label="Ya me pagaron"
+                    type="number"
+                    inputMode="decimal"
+                    value={form.reimbursedAmount}
+                    onChange={(e) => setForm((f) => ({ ...f, reimbursedAmount: e.target.value }))}
+                    placeholder="0.00"
+                  />
+                </div>
+                {form.amount && (
+                  <p className="text-xs text-stone-500 dark:text-stone-400">
+                    {formOwed > 0 ? `Te deben ${formatCurrency(formOwed)}` : 'No te deben nada'}
+                    {form.myShare === '' && ' · sin tu parte, se asume que te deben todo'}
+                  </p>
+                )}
+              </div>
             )}
 
             <div className="flex justify-end gap-2">
@@ -360,7 +390,7 @@ function GastosVariablesContent() {
           )}
           {transactions.map((t, i) => {
             const PaymentIcon = t.paymentMethod ? PAYMENT_ICONS[t.paymentMethod] : null;
-            const pending = (t.shared ? t.amount - (t.reimbursedAmount ?? 0) : 0);
+            const pending = owedToYou(t);
             return (
               <div
                 key={t.id}

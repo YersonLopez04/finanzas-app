@@ -10,6 +10,14 @@ export function transactionCost(t: Pick<Transaction, 'amount' | 'shared' | 'reim
   return Math.max(t.amount - (t.reimbursedAmount ?? 0), 0);
 }
 
+// Lo que aún te deben de un gasto compartido: el monto menos tu parte y menos
+// lo que ya te devolvieron. Sin tu parte indicada, se asume que te deben todo.
+export function owedToYou(t: Pick<Transaction, 'amount' | 'shared' | 'reimbursedAmount' | 'myShare'>) {
+  if (!t.shared) return 0;
+  const myShare = Math.min(t.myShare ?? 0, t.amount);
+  return Math.max(t.amount - myShare - (t.reimbursedAmount ?? 0), 0);
+}
+
 export function variableTotal(transactions: Transaction[]) {
   return transactions.reduce((s, t) => s + transactionCost(t), 0);
 }
