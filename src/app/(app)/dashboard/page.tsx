@@ -6,6 +6,7 @@ import { useAuth } from '@/lib/auth-context';
 import { getMonth, saveMonth, getTransactions, getAccounts, saveAccount, addMovement } from '@/lib/db';
 import { getCurrentMonthId, formatCurrency, monthIdToLabel, todayISO } from '@/lib/utils';
 import { notifyOncePerDay } from '@/lib/notifications';
+import { monthTotals } from '@/lib/totals';
 import { MonthPicker } from '@/components/layout/MonthPicker';
 import { Card, CardBody, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -112,11 +113,13 @@ export default function DashboardPage() {
     if (accountIds.size > 0) setAccounts(await getAccounts(userId));
   }
 
-  const totalIncome = income.fixed + income.variable + income.extras;
-  const totalSavings = savings.reduce((s, a) => s + (a.amount || 0), 0);
-  const totalGV = transactions.reduce((s, t) => s + t.amount, 0);
-  const totalGF = (monthData?.fixedExpenses ?? []).reduce((s, f) => s + (f.amount || 0), 0);
-  const remaining = totalIncome - totalSavings - totalGV - totalGF;
+  const {
+    income: totalIncome,
+    savings: totalSavings,
+    fixed: totalGF,
+    variable: totalGV,
+    remaining,
+  } = monthTotals({ income, savings, fixedExpenses: monthData?.fixedExpenses ?? [] }, transactions);
   const pendingFixed = (monthData?.fixedExpenses ?? []).filter((f) => !f.paid);
   const isCurrentMonth = monthId === getCurrentMonthId();
   const today = new Date().getDate();

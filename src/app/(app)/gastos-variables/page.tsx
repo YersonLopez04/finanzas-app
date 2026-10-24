@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { getTransactions, addTransaction, updateTransaction, deleteTransaction, getCategories, addCategory, deleteCategory } from '@/lib/db';
 import { getCurrentMonthId, formatCurrency, todayISO } from '@/lib/utils';
+import { variableTotal, reimbursedTotal, costByCategory } from '@/lib/totals';
 import { categoryBadgeClass } from '@/lib/categoryColors';
 import { MonthPicker } from '@/components/layout/MonthPicker';
 import { Card, CardBody, CardHeader } from '@/components/ui/Card';
@@ -158,14 +159,13 @@ function GastosVariablesContent() {
     }
   }
 
-  const total = transactions.reduce((s, t) => s + t.amount, 0);
+  const total = variableTotal(transactions);
+  const reimbursed = reimbursedTotal(transactions);
 
   // group by category
+  const totalsByCategory = costByCategory(transactions);
   const byCategory = categories
-    .map(({ name: cat }) => ({
-      cat,
-      total: transactions.filter((t) => t.category === cat).reduce((s, t) => s + t.amount, 0),
-    }))
+    .map(({ name: cat }) => ({ cat, total: totalsByCategory[cat] ?? 0 }))
     .filter((x) => x.total > 0);
 
   if (loading) return <div className="text-stone-500 dark:text-stone-400 text-sm mt-8 text-center">Cargando...</div>;
@@ -343,9 +343,16 @@ function GastosVariablesContent() {
       {/* Lista de transacciones */}
       <Card>
         <CardHeader className="flex items-center justify-between">
-          <p className="text-sm font-semibold text-stone-700 dark:text-stone-200">
-            {transactions.length} gastos — {formatCurrency(total)} total
-          </p>
+          <div>
+            <p className="text-sm font-semibold text-stone-700 dark:text-stone-200">
+              {transactions.length} gastos — {formatCurrency(total)} total
+            </p>
+            {reimbursed > 0 && (
+              <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">
+                Ya descontados {formatCurrency(reimbursed)} que te devolvieron
+              </p>
+            )}
+          </div>
         </CardHeader>
         <CardBody className="p-0">
           {transactions.length === 0 && (

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { listMonths, getAllTransactions } from '@/lib/db';
 import { formatCurrency, monthIdToLabel } from '@/lib/utils';
+import { monthTotals, costByCategory, type MonthTotals } from '@/lib/totals';
 import { categoryBarClass } from '@/lib/categoryColors';
 import { Card, CardBody, CardHeader } from '@/components/ui/Card';
 import { LoadError } from '@/components/ui/ErrorToast';
@@ -11,13 +12,8 @@ import { Select } from '@/components/ui/Select';
 import type { MonthData, Transaction } from '@/types';
 import { History, Tags } from 'lucide-react';
 
-interface MonthSummary {
+interface MonthSummary extends MonthTotals {
   id: string;
-  income: number;
-  savings: number;
-  fixed: number;
-  variable: number;
-  remaining: number;
 }
 
 const RANGE_OPTIONS = [
@@ -39,18 +35,12 @@ export default function HistorialPage() {
     if (!user) return;
     Promise.all([listMonths(user.id), getAllTransactions(user.id)])
       .then(([months, txs]) => {
-        const gvByMonth = txs.reduce<Record<string, number>>((acc, t) => {
-          acc[t.monthId] = (acc[t.monthId] ?? 0) + t.amount;
+        const txsByMonth = txs.reduce<Record<string, Transaction[]>>((acc, t) => {
+          (acc[t.monthId] ??= []).push(t);
           return acc;
         }, {});
 
-        const rows: MonthSummary[] = months.map((m: MonthData) => {
-          const income = m.income.fixed + m.income.variable + m.income.extras;
-          const savings = m.savings.reduce((s, a) => s + (a.amount || 0), 0);
-          const fixed = m.fixedExpenses.reduce((s, f) => s + (f.amount || 0), 0);
-          const variable = gvByMonth[m.id] ?? 0;
-          return { id: m.id, income, savings, fixed, variable, remaining: income - savings - fixed - variable };
-        });
+        const rows: MonthSummary[] = months.map((m: MonthData) => ({ id: m.id, ...monthTotals(m, txsByMonth[m.id] ?? []) }));
 
         setSummaries(rows);
         setTransactions(txs);
@@ -68,11 +58,7 @@ export default function HistorialPage() {
 
   const categoryTotals = useMemo(() => {
     const filtered = transactions.filter((t) => rangedMonthIds.has(t.monthId));
-    const totals = filtered.reduce<Record<string, number>>((acc, t) => {
-      acc[t.category] = (acc[t.category] ?? 0) + t.amount;
-      return acc;
-    }, {});
-    return Object.entries(totals)
+    return Object.entries(costByCategory(filtered))
       .map(([cat, total]) => ({ cat, total }))
       .sort((a, b) => b.total - a.total);
   }, [transactions, rangedMonthIds]);
