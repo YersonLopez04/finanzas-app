@@ -9,6 +9,7 @@ App personal de finanzas de Yerson (y quizá su círculo cercano) que reemplaza 
 - Next.js 16 (App Router) + TypeScript + Tailwind v4 + Supabase (Postgres + Auth con `@supabase/ssr`). Sin librería de animación: todo es CSS.
 - Producción: https://finanzas-app-chi-five.vercel.app — Vercel despliega solo al hacer push a `main`.
 - Repo: `YersonLopez04/finanzas-app`. **Push**: el llavero de macOS tiene otra cuenta cacheada; usar `git -c credential.helper= push` desde la terminal del dueño.
+- Google Cloud `finanzas-app-512605`: solo sirve para el login con Google. **Sin facturación** a propósito (desvinculada el 2026-10-24) para que nunca cobre. No volver a vincularla sin preguntar.
 - `.github/workflows/supabase-keepalive.yml` consulta la base cada 3 días para que el plan gratuito no la pause.
 
 ## Mapa del código
@@ -61,7 +62,6 @@ Claude hace commits pero **no** sube ni despliega. El dueño corre el push; si h
 ## Pendientes (en orden)
 
 1. Ejecutar la migración 005 y subir los commits locales.
-2. Google Cloud `finanzas-app-512605`: tiene facturación activa (misma cuenta que LUNA) sin usarla. Desvincularla o poner un presupuesto con alertas (decisión del dueño).
-3. Cabeceras de seguridad en `next.config.ts` (CSP primero en Report-Only), sobre todo si la usan amigos.
-4. Tests de `totals.ts` dentro del repo.
-5. Diferido: recordatorios por correo de gastos fijos ("no es crítico").
+2. Cabeceras de seguridad en `next.config.ts` (CSP primero en Report-Only), sobre todo si la usan amigos.
+3. Tests de `totals.ts` dentro del repo.
+4. Diferido: recordatorios por correo de gastos fijos ("no es crítico").
