@@ -144,7 +144,7 @@ export default function HistorialPage() {
               {rangedSummaries.map((m) => (
                 <div key={m.id} className="flex flex-col gap-2">
                   <div className="flex items-center justify-between">
-                    <p className="text-sm font-semibold text-stone-800 dark:text-stone-100 capitalize">{monthIdToLabel(m.id)}</p>
+                    <p className="text-sm font-semibold text-stone-800 dark:text-stone-100 first-letter:uppercase">{monthIdToLabel(m.id)}</p>
                     <span className={`text-sm font-semibold ${m.remaining < 0 ? 'text-red-500 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
                       {formatCurrency(m.remaining)}
                     </span>

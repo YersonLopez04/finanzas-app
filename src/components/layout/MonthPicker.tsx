@@ -24,7 +24,7 @@ export function MonthPicker({ monthId, onChange }: Props) {
       >
         <ChevronLeft size={16} />
       </button>
-      <span className="text-sm font-medium text-stone-700 dark:text-stone-200 capitalize min-w-[140px] text-center">
+      <span className="text-sm font-medium text-stone-700 dark:text-stone-200 inline-block first-letter:uppercase min-w-[140px] text-center">
         {monthIdToLabel(monthId)}
       </span>
       <button

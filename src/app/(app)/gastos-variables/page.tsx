@@ -4,7 +4,7 @@ import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { getTransactions, addTransaction, updateTransaction, deleteTransaction, getCategories, addCategory, deleteCategory } from '@/lib/db';
-import { getCurrentMonthId, formatCurrency, todayISO, insertAt } from '@/lib/utils';
+import { getCurrentMonthId, formatCurrency, insertAt, defaultDateForMonth, monthBounds, formatShortDate } from '@/lib/utils';
 import { showUndo } from '@/components/ui/UndoToast';
 import { variableTotal, reimbursedTotal, costByCategory, owedToYou } from '@/lib/totals';
 import { categoryBadgeClass } from '@/lib/categoryColors';
@@ -24,9 +24,9 @@ const PAYMENT_ICONS: Record<PaymentMethod, typeof CreditCard> = {
   efectivo: Banknote,
 };
 
-function emptyForm(defaultCategory: string) {
+function emptyForm(defaultCategory: string, monthId: string) {
   return {
-    date: todayISO(),
+    date: defaultDateForMonth(monthId),
     amount: '',
     category: defaultCategory,
     description: '',
@@ -66,7 +66,7 @@ function GastosVariablesContent() {
   }, [searchParams, router]);
 
   // form
-  const [form, setForm] = useState(emptyForm(''));
+  const [form, setForm] = useState(emptyForm('', getCurrentMonthId()));
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -107,7 +107,7 @@ function GastosVariablesContent() {
 
   function openNewForm() {
     setEditingId(null);
-    setForm(emptyForm(categories[0]?.name ?? ''));
+    setForm(emptyForm(categories[0]?.name ?? '', monthId));
     setShowForm(true);
   }
 
@@ -282,6 +282,7 @@ function GastosVariablesContent() {
               <Input
                 label="Fecha"
                 type="date"
+                {...monthBounds(monthId)}
                 value={form.date}
                 onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))}
               />
@@ -422,7 +423,7 @@ function GastosVariablesContent() {
                         <Users size={11} /> Compartido
                       </span>
                     )}
-                    <span className="text-xs text-stone-500 dark:text-stone-400">{t.date}</span>
+                    <span className="text-xs text-stone-500 dark:text-stone-400">{formatShortDate(t.date)}</span>
                   </div>
                   {t.description && (
                     <p className="text-sm text-stone-600 dark:text-stone-300 truncate">{t.description}</p>

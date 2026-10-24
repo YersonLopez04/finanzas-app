@@ -1,4 +1,5 @@
 import { listMonths, getAllTransactions, getAccounts, getMovements } from './db';
+import { todayISO } from './utils';
 
 function csvEscape(value: string | number | boolean | null | undefined) {
   const s = value === null || value === undefined ? '' : String(value);
@@ -72,7 +73,7 @@ export async function exportAllData(userId: string) {
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  const date = new Date().toISOString().split('T')[0];
+  const date = todayISO();
   a.href = url;
   a.download = `finanzas-backup-${date}.csv`;
   a.click();

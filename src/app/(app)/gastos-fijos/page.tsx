@@ -10,7 +10,7 @@ import {
   addFixedExpenseEntry,
   deleteFixedExpenseEntry,
 } from '@/lib/db';
-import { getCurrentMonthId, getPreviousMonthId, monthIdToLabel, formatCurrency, todayISO, insertAt } from '@/lib/utils';
+import { getCurrentMonthId, getPreviousMonthId, monthIdToLabel, formatCurrency, todayISO, insertAt, formatShortDate } from '@/lib/utils';
 import { showUndo } from '@/components/ui/UndoToast';
 import { MonthPicker } from '@/components/layout/MonthPicker';
 import { Card, CardBody, CardHeader } from '@/components/ui/Card';
@@ -229,7 +229,7 @@ function FixedExpenseRow({
           {entries.map((e) => (
             <div key={e.id} className="flex items-center justify-between text-sm">
               <div className="min-w-0">
-                <span className="text-stone-500 dark:text-stone-400 text-xs mr-2">{e.date}</span>
+                <span className="text-stone-500 dark:text-stone-400 text-xs mr-2">{formatShortDate(e.date)}</span>
                 <span className="text-stone-600 dark:text-stone-300">{e.note}</span>
               </div>
               <div className="flex items-center gap-2 shrink-0">

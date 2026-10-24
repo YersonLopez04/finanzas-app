@@ -172,7 +172,9 @@ export default function DashboardPage() {
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-800 via-slate-800 to-slate-700 px-6 py-7 text-white">
         <div className="absolute -top-10 -right-10 w-44 h-44 rounded-full bg-white/5" />
         <div className="absolute -bottom-14 -right-4 w-32 h-32 rounded-full bg-white/5" />
-        <p className="text-xs text-slate-300 relative">Restante este mes</p>
+        <p className="text-xs text-slate-300 relative">
+          {isCurrentMonth ? 'Restante este mes' : `Restante de ${monthIdToLabel(monthId).split(' ')[0]}`}
+        </p>
         <p className={`text-4xl font-bold mt-1.5 relative ${remaining < 0 ? 'text-rose-300' : 'text-white'}`}>
           {formatCurrency(remaining)}
         </p>
@@ -307,33 +309,34 @@ export default function DashboardPage() {
           )}
           {savings.map((s) => (
             <div key={s.id} className="flex items-center gap-2">
-              <Select
-                value={s.accountId ?? ''}
-                onChange={(e) => {
-                  const acc = accounts.find((a) => a.id === e.target.value);
-                  setSavings((prev) =>
-                    prev.map((x) => (x.id === s.id ? { ...x, accountId: acc?.id, name: acc?.name ?? '' } : x))
-                  );
-                }}
-                options={[
-                  { value: '', label: accounts.length ? 'Elige una cuenta...' : 'Sin cuentas creadas' },
-                  ...accounts.map((a) => ({ value: a.id, label: a.name })),
-                ]}
-                className="flex-1"
-              />
-              <Input
-                type="number"
-                value={s.amount || ''}
-                onChange={(e) =>
-                  setSavings((prev) =>
-                    prev.map((x) =>
-                      x.id === s.id ? { ...x, amount: Number(e.target.value) } : x
-                    )
-                  )
-                }
-                placeholder="0"
-                className="w-28"
-              />
+              <div className="flex-1 min-w-0">
+                <Select
+                  aria-label="Cuenta"
+                  value={s.accountId ?? ''}
+                  onChange={(e) => {
+                    const acc = accounts.find((a) => a.id === e.target.value);
+                    setSavings((prev) =>
+                      prev.map((x) => (x.id === s.id ? { ...x, accountId: acc?.id, name: acc?.name ?? '' } : x))
+                    );
+                  }}
+                  options={[
+                    { value: '', label: accounts.length ? 'Elige cuenta' : 'Sin cuentas creadas' },
+                    ...accounts.map((a) => ({ value: a.id, label: a.name })),
+                  ]}
+                />
+              </div>
+              <div className="w-28 shrink-0">
+                <Input
+                  type="number"
+                  inputMode="decimal"
+                  value={s.amount || ''}
+                  onChange={(e) =>
+                    setSavings((prev) => prev.map((x) => (x.id === s.id ? { ...x, amount: Number(e.target.value) } : x)))
+                  }
+                  placeholder="0"
+                  aria-label="Monto"
+                />
+              </div>
               <button
                 onClick={() => removeSaving(s.id)}
                 aria-label="Eliminar asignación de ahorro"

@@ -1,3 +1,4 @@
+import { todayISO } from './utils';
 export function notificationsSupported() {
   return typeof window !== 'undefined' && 'Notification' in window;
 }
@@ -14,7 +15,7 @@ export async function requestNotificationPermission() {
 
 export function notifyOncePerDay(key: string, title: string, body: string) {
   if (!notificationsEnabled()) return;
-  const today = new Date().toISOString().split('T')[0];
+  const today = todayISO();
   const flagKey = `notified_${key}_${today}`;
   if (localStorage.getItem(flagKey)) return;
   new Notification(title, { body });

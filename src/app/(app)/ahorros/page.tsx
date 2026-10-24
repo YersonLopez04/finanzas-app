@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { getAccounts, saveAccount, deleteAccount, getMovements, addMovement, deleteMovement } from '@/lib/db';
-import { formatCurrency, insertAt } from '@/lib/utils';
+import { formatCurrency, insertAt, todayISO, formatShortDate } from '@/lib/utils';
 import { showUndo } from '@/components/ui/UndoToast';
 import { Card, CardBody, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -49,7 +49,7 @@ function AccountCard({
   const [movAmount, setMovAmount] = useState('');
   const [movDesc, setMovDesc] = useState('');
   const [movType, setMovType] = useState<'deposit' | 'withdrawal'>('deposit');
-  const [movDate, setMovDate] = useState(new Date().toISOString().split('T')[0]);
+  const [movDate, setMovDate] = useState(todayISO());
 
   async function loadMovements() {
     const data = await getMovements(userId, account.id);
@@ -213,7 +213,7 @@ function AccountCard({
             {movements.map((m) => (
               <div key={m.id} className="flex items-center justify-between text-sm">
                 <div>
-                  <span className="text-stone-500 dark:text-stone-400 text-xs mr-2">{m.date}</span>
+                  <span className="text-stone-500 dark:text-stone-400 text-xs mr-2">{formatShortDate(m.date)}</span>
                   <span className="text-stone-600 dark:text-stone-300">{m.description}</span>
                 </div>
                 <div className="flex items-center gap-2">
