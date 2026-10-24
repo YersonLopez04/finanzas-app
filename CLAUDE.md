@@ -16,6 +16,7 @@ App personal de finanzas de Yerson (y quizá su círculo cercano) que reemplaza 
 - `src/lib/db.ts` — **única** capa de datos. Todo acceso a Supabase pasa por aquí.
 - `src/lib/totals.ts` — **única** fuente de los cálculos de dinero (restante, totales, "Te deben").
 - `src/components/ui/ErrorToast.tsx` — aviso global de errores (`reportError`) y pantalla de carga fallida (`LoadError`).
+- `src/components/ui/UndoToast.tsx` — aviso "Deshacer" de los borrados (`showUndo`).
 - `src/app/(app)/*` — pantallas: dashboard (Resumen), gastos-fijos, gastos-variables, ahorros, historial, perfil.
 - `src/lib/export.ts` / `import.ts` — respaldo CSV.
 - `supabase/schema.sql` — esquema completo para una base nueva; `supabase/migrations/` — cambios incrementales.
@@ -37,6 +38,7 @@ Al agregar una columna: migración nueva + actualizar `schema.sql` + tipos + `db
 - **Una carga fallida nunca muestra un formulario vacío**: se muestra `LoadError`. Un formulario vacío, al guardarse, pisa los datos reales.
 - **Guardar listas = upsert por id primero, borrar las filas quitadas después.** Nunca borrar todo y reinsertar: un fallo en medio deja el mes vacío y rompe llaves foráneas.
 - **Cada pantalla guarda solo lo que edita.** Resumen manda `fixedExpenses: undefined`; Gastos fijos manda `savings: undefined`. Reenviar copias viejas pisa cambios.
+- **Borrar siempre con deshacer** (`showUndo`): la vista quita el elemento al instante y el borrado real (`onCommit`) espera 5 s. Excepción: los movimientos de cuenta se borran al instante y deshacer los vuelve a registrar, porque también mueven el saldo. Si se cierra la app dentro de esos 5 s, el borrado no ocurre (lado seguro).
 - **Ids estables** (`crypto.randomUUID()`), nunca la posición en un arreglo.
 - **Ahorros vinculados a cuentas**: Resumen aplica a la cuenta solo la diferencia contra lo último guardado. Primero se guarda el mes y luego los saldos (al revés, reintentar sumaba dos veces).
 
@@ -59,7 +61,7 @@ Claude hace commits pero **no** sube ni despliega. El dueño corre el push; si h
 ## Pendientes (en orden)
 
 1. Ejecutar la migración 005 y subir los commits locales.
-2. Deshacer al borrar (aviso con "Deshacer") en vez de borrar al instante.
+2. Google Cloud `finanzas-app-512605`: tiene facturación activa (misma cuenta que LUNA) sin usarla. Desvincularla o poner un presupuesto con alertas (decisión del dueño).
 3. Cabeceras de seguridad en `next.config.ts` (CSP primero en Report-Only), sobre todo si la usan amigos.
 4. Tests de `totals.ts` dentro del repo.
 5. Diferido: recordatorios por correo de gastos fijos ("no es crítico").

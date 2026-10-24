@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { getAccounts, saveAccount, deleteAccount, getMovements, addMovement, deleteMovement } from '@/lib/db';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, insertAt } from '@/lib/utils';
+import { showUndo } from '@/components/ui/UndoToast';
 import { Card, CardBody, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -39,6 +40,11 @@ function AccountCard({
 }) {
   const [movements, setMovements] = useState<AccountMovement[]>([]);
   const [expanded, setExpanded] = useState(false);
+  // Deshacer un movimiento corre segundos después: necesita el saldo de ese momento, no el de cuando se borró.
+  const accountRef = useRef(account);
+  useEffect(() => {
+    accountRef.current = account;
+  }, [account]);
   const [showMovForm, setShowMovForm] = useState(false);
   const [movAmount, setMovAmount] = useState('');
   const [movDesc, setMovDesc] = useState('');
@@ -82,13 +88,27 @@ function AccountCard({
     }
   }
 
-  async function handleDeleteMovement(id: string, amount: number) {
+  // El movimiento se borra al instante (no se difiere) porque también mueve el
+  // saldo, y otro movimiento en esos segundos podría guardar un saldo que ya lo
+  // descuenta. Deshacer lo vuelve a registrar sobre el saldo de ese momento.
+  async function handleDeleteMovement(m: AccountMovement) {
     try {
-      await deleteMovement(id);
-      const newBalance = account.balance - amount;
+      await deleteMovement(m.id);
+      const newBalance = account.balance - m.amount;
       await saveAccount(userId, { ...account, balance: newBalance });
       onBalanceChange(newBalance);
-      setMovements((prev) => prev.filter((m) => m.id !== id));
+      setMovements((prev) => prev.filter((x) => x.id !== m.id));
+      showUndo({
+        message: 'Movimiento borrado',
+        onUndo: async () => {
+          await addMovement({ accountId: m.accountId, userId, date: m.date, amount: m.amount, description: m.description });
+          const latest = accountRef.current;
+          const restored = latest.balance + m.amount;
+          await saveAccount(userId, { ...latest, balance: restored });
+          onBalanceChange(restored);
+          await loadMovements();
+        },
+      });
     } catch (err) {
       reportError(err);
     }
@@ -201,7 +221,7 @@ function AccountCard({
                     {m.amount >= 0 ? '+' : ''}{formatCurrency(m.amount, account.currency)}
                   </span>
                   <button
-                    onClick={() => handleDeleteMovement(m.id, m.amount)}
+                    onClick={() => handleDeleteMovement(m)}
                     aria-label="Eliminar movimiento"
                     className="text-stone-400 dark:text-stone-600 hover:text-red-400 transition-colors p-2 -m-2"
                   >
@@ -277,14 +297,18 @@ export default function AhorrosPage() {
     }
   }
 
-  async function handleDelete(accountId: string) {
+  function handleDelete(accountId: string) {
     if (!user) return;
-    try {
-      await deleteAccount(user.id, accountId);
-      setAccounts((prev) => prev.filter((a) => a.id !== accountId));
-    } catch (err) {
-      reportError(err);
-    }
+    const index = accounts.findIndex((a) => a.id === accountId);
+    const removed = accounts[index];
+    if (!removed) return;
+    setAccounts((prev) => prev.filter((a) => a.id !== accountId));
+    showUndo({
+      message: `Cuenta "${removed.name}" borrada`,
+      onUndo: () => setAccounts((prev) => insertAt(prev, index, removed)),
+      // Borra también sus movimientos (en cascada), por eso espera al plazo.
+      onCommit: () => deleteAccount(user.id, accountId),
+    });
   }
 
   function handleBalanceChange(accountId: string, newBalance: number) {

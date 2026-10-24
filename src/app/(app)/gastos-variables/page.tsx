@@ -4,7 +4,8 @@ import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { getTransactions, addTransaction, updateTransaction, deleteTransaction, getCategories, addCategory, deleteCategory } from '@/lib/db';
-import { getCurrentMonthId, formatCurrency, todayISO } from '@/lib/utils';
+import { getCurrentMonthId, formatCurrency, todayISO, insertAt } from '@/lib/utils';
+import { showUndo } from '@/components/ui/UndoToast';
 import { variableTotal, reimbursedTotal, costByCategory, owedToYou } from '@/lib/totals';
 import { categoryBadgeClass } from '@/lib/categoryColors';
 import { MonthPicker } from '@/components/layout/MonthPicker';
@@ -92,13 +93,16 @@ function GastosVariablesContent() {
     }
   }
 
-  async function handleDeleteCategory(id: string) {
-    try {
-      await deleteCategory(id);
-      setCategories((prev) => prev.filter((c) => c.id !== id));
-    } catch (err) {
-      reportError(err);
-    }
+  function handleDeleteCategory(id: string) {
+    const index = categories.findIndex((c) => c.id === id);
+    const removed = categories[index];
+    if (!removed) return;
+    setCategories((prev) => prev.filter((c) => c.id !== id));
+    showUndo({
+      message: `Categoría "${removed.name}" borrada`,
+      onUndo: () => setCategories((prev) => insertAt(prev, index, removed)),
+      onCommit: () => deleteCategory(id),
+    });
   }
 
   function openNewForm() {
@@ -153,13 +157,16 @@ function GastosVariablesContent() {
     }
   }
 
-  async function handleDelete(id: string) {
-    try {
-      await deleteTransaction(id);
-      setTransactions((prev) => prev.filter((t) => t.id !== id));
-    } catch (err) {
-      reportError(err);
-    }
+  function handleDelete(id: string) {
+    const index = transactions.findIndex((t) => t.id === id);
+    const removed = transactions[index];
+    if (!removed) return;
+    setTransactions((prev) => prev.filter((t) => t.id !== id));
+    showUndo({
+      message: 'Gasto borrado',
+      onUndo: () => setTransactions((prev) => insertAt(prev, index, removed)),
+      onCommit: () => deleteTransaction(id),
+    });
   }
 
   // Vista previa en el formulario, con la misma regla que la lista.

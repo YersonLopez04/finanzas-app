@@ -26,3 +26,10 @@ export function getPreviousMonthId(monthId: string) {
   const date = new Date(year, month - 2, 1);
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
 }
+
+// Devuelve una copia con el elemento en su posición original (para deshacer un borrado).
+export function insertAt<T>(list: T[], index: number, item: T) {
+  const next = [...list];
+  next.splice(Math.min(index, next.length), 0, item);
+  return next;
+}

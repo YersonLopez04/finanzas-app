@@ -10,7 +10,8 @@ import {
   addFixedExpenseEntry,
   deleteFixedExpenseEntry,
 } from '@/lib/db';
-import { getCurrentMonthId, getPreviousMonthId, monthIdToLabel, formatCurrency, todayISO } from '@/lib/utils';
+import { getCurrentMonthId, getPreviousMonthId, monthIdToLabel, formatCurrency, todayISO, insertAt } from '@/lib/utils';
+import { showUndo } from '@/components/ui/UndoToast';
 import { MonthPicker } from '@/components/layout/MonthPicker';
 import { Card, CardBody, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -76,14 +77,20 @@ function FixedExpenseRow({
     }
   }
 
-  async function handleDeleteEntry(id: string, amount: number) {
-    try {
-      await deleteFixedExpenseEntry(id);
-      onSpentDelta(expense.id, -amount);
-      setEntries((prev) => prev.filter((e) => e.id !== id));
-    } catch (err) {
-      reportError(err);
-    }
+  function handleDeleteEntry(id: string) {
+    const index = entries.findIndex((e) => e.id === id);
+    const removed = entries[index];
+    if (!removed) return;
+    setEntries((prev) => prev.filter((e) => e.id !== id));
+    onSpentDelta(expense.id, -removed.amount);
+    showUndo({
+      message: 'Carga borrada',
+      onUndo: () => {
+        setEntries((prev) => insertAt(prev, index, removed));
+        onSpentDelta(expense.id, removed.amount);
+      },
+      onCommit: () => deleteFixedExpenseEntry(id),
+    });
   }
 
   const pct = expense.amount > 0 ? Math.min(spent / expense.amount, 1) : 0;
@@ -228,7 +235,7 @@ function FixedExpenseRow({
               <div className="flex items-center gap-2 shrink-0">
                 <span className="text-stone-700 dark:text-stone-200 font-medium">{formatCurrency(e.amount)}</span>
                 <button
-                  onClick={() => handleDeleteEntry(e.id, e.amount)}
+                  onClick={() => handleDeleteEntry(e.id)}
                   aria-label="Eliminar carga"
                   className="text-stone-400 dark:text-stone-600 hover:text-red-400 transition-colors p-2 -m-2"
                 >
