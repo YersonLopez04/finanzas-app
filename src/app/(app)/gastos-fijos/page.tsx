@@ -15,6 +15,7 @@ import { MonthPicker } from '@/components/layout/MonthPicker';
 import { Card, CardBody, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { reportError, LoadError } from '@/components/ui/ErrorToast';
 import type { MonthData, FixedExpense, FixedExpenseEntry } from '@/types';
 import { Plus, Trash2, Check, Copy, Target, ChevronDown, ChevronUp, X } from 'lucide-react';
 
@@ -52,25 +53,37 @@ function FixedExpenseRow({
   }
 
   async function handleToggleExpand() {
-    if (!expanded) await loadEntries();
-    setExpanded((p) => !p);
+    try {
+      if (!expanded) await loadEntries();
+      setExpanded((p) => !p);
+    } catch (err) {
+      reportError(err);
+    }
   }
 
   async function handleAddEntry() {
     if (!entryAmount) return;
     const amount = Number(entryAmount);
-    await addFixedExpenseEntry({ fixedExpenseId: expense.id, userId, date: entryDate, amount, note: entryNote });
-    onSpentDelta(expense.id, amount);
-    setEntryAmount('');
-    setEntryNote('');
-    setShowEntryForm(false);
-    await loadEntries();
+    try {
+      await addFixedExpenseEntry({ fixedExpenseId: expense.id, userId, date: entryDate, amount, note: entryNote });
+      onSpentDelta(expense.id, amount);
+      setEntryAmount('');
+      setEntryNote('');
+      setShowEntryForm(false);
+      await loadEntries();
+    } catch (err) {
+      reportError(err);
+    }
   }
 
   async function handleDeleteEntry(id: string, amount: number) {
-    await deleteFixedExpenseEntry(id);
-    onSpentDelta(expense.id, -amount);
-    setEntries((prev) => prev.filter((e) => e.id !== id));
+    try {
+      await deleteFixedExpenseEntry(id);
+      onSpentDelta(expense.id, -amount);
+      setEntries((prev) => prev.filter((e) => e.id !== id));
+    } catch (err) {
+      reportError(err);
+    }
   }
 
   const pct = expense.amount > 0 ? Math.min(spent / expense.amount, 1) : 0;
@@ -238,22 +251,24 @@ export default function GastosFijosPage() {
   const [previousExpenses, setPreviousExpenses] = useState<FixedExpense[]>([]);
   const [spentTotals, setSpentTotals] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<unknown>(null);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (!user) return;
     setLoading(true);
-    Promise.all([getMonth(user.id, monthId), getMonth(user.id, getPreviousMonthId(monthId))]).then(
-      async ([data, prevData]) => {
+    setLoadError(null);
+    Promise.all([getMonth(user.id, monthId), getMonth(user.id, getPreviousMonthId(monthId))])
+      .then(async ([data, prevData]) => {
         const fixedExpenses = data?.fixedExpenses ?? [];
         setMonthData(data);
         setExpenses(fixedExpenses);
         setPreviousExpenses(prevData?.fixedExpenses ?? []);
         const trackedIds = fixedExpenses.filter((e) => e.tracked).map((e) => e.id);
         setSpentTotals(await getFixedExpenseEntryTotals(user.id, trackedIds));
-        setLoading(false);
-      }
-    );
+      })
+      .catch(setLoadError)
+      .finally(() => setLoading(false));
   }, [user, monthId]);
 
   function copyFromPreviousMonth() {
@@ -275,12 +290,19 @@ export default function GastosFijosPage() {
   async function handleSave() {
     if (!user) return;
     setSaving(true);
-    await saveMonth(user.id, monthId, {
-      ...monthData,
-      fixedExpenses: expenses,
-      createdAt: monthData?.createdAt ?? new Date().toISOString(),
-    });
-    setSaving(false);
+    try {
+      await saveMonth(user.id, monthId, {
+        ...monthData,
+        // Esta pantalla no edita ahorros: no reenviarlos evita pisar con una copia vieja.
+        savings: undefined,
+        fixedExpenses: expenses,
+        createdAt: monthData?.createdAt ?? new Date().toISOString(),
+      });
+    } catch (err) {
+      reportError(err);
+    } finally {
+      setSaving(false);
+    }
   }
 
   function updateExpense(id: string, field: keyof FixedExpense, value: string | number | boolean | undefined) {
@@ -307,6 +329,7 @@ export default function GastosFijosPage() {
   const pending = total - paid;
 
   if (loading) return <div className="text-stone-500 dark:text-stone-400 text-sm mt-8 text-center">Cargando...</div>;
+  if (loadError) return <LoadError error={loadError} />;
 
   return (
     <div className="max-w-2xl mx-auto flex flex-col gap-6">

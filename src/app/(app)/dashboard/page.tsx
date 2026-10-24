@@ -10,6 +10,7 @@ import { MonthPicker } from '@/components/layout/MonthPicker';
 import { Card, CardBody, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { reportError, LoadError } from '@/components/ui/ErrorToast';
 import { Select } from '@/components/ui/Select';
 import type { MonthData, Income, SavingsAllocation, Transaction, Account } from '@/types';
 import { Plus, Trash2, Wallet, PiggyBank, PieChart, History, AlertCircle } from 'lucide-react';
@@ -21,6 +22,7 @@ export default function DashboardPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<unknown>(null);
   const [saving, setSaving] = useState(false);
 
   // edit states
@@ -30,8 +32,9 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!user) return;
     setLoading(true);
-    Promise.all([getMonth(user.id, monthId), getTransactions(user.id, monthId), getAccounts(user.id)]).then(
-      ([data, txs, accs]) => {
+    setLoadError(null);
+    Promise.all([getMonth(user.id, monthId), getTransactions(user.id, monthId), getAccounts(user.id)])
+      .then(([data, txs, accs]) => {
         if (data) {
           setIncome(data.income ?? { fixed: 0, variable: 0, extras: 0 });
           setSavings(data.savings ?? []);
@@ -43,15 +46,24 @@ export default function DashboardPage() {
         }
         setTransactions(txs);
         setAccounts(accs);
-        setLoading(false);
-      }
-    );
+      })
+      .catch(setLoadError)
+      .finally(() => setLoading(false));
   }, [user, monthId]);
 
   async function handleSave() {
     if (!user) return;
     setSaving(true);
+    try {
+      await saveMonthAndAccounts(user.id);
+    } catch (err) {
+      reportError(err);
+    } finally {
+      setSaving(false);
+    }
+  }
 
+  async function saveMonthAndAccounts(userId: string) {
     // Aplicar a las cuentas vinculadas solo la diferencia respecto a lo ya guardado,
     // para no duplicar el monto si se guarda el mismo mes varias veces.
     const sumByAccount = (list: SavingsAllocation[]) =>
@@ -64,30 +76,40 @@ export default function DashboardPage() {
     const newSums = sumByAccount(savings);
     const accountIds = new Set([...Object.keys(oldSums), ...Object.keys(newSums)]);
 
+    // Primero el mes y luego las cuentas. Al revés, si el mes fallaba después de
+    // mover saldos, reintentar volvía a sumar la misma diferencia.
+    const saved: MonthData = {
+      id: monthId,
+      income,
+      savings,
+      fixedExpenses: monthData?.fixedExpenses ?? [],
+      createdAt: monthData?.createdAt ?? new Date().toISOString(),
+    };
+    // Esta pantalla no edita gastos fijos: no reenviarlos evita pisarlos con una copia vieja.
+    await saveMonth(userId, monthId, { ...saved, fixedExpenses: undefined });
+    // La base para la próxima diferencia pasa a ser lo recién guardado.
+    setMonthData(saved);
+
     for (const accountId of accountIds) {
       const delta = (newSums[accountId] ?? 0) - (oldSums[accountId] ?? 0);
       if (!delta) continue;
       const account = accounts.find((a) => a.id === accountId);
       if (!account) continue;
-      await saveAccount(user.id, { ...account, balance: account.balance + delta });
+      const balance = account.balance + delta;
+      await saveAccount(userId, { ...account, balance });
+      // Al momento, por si una cuenta siguiente falla: el próximo guardado debe
+      // partir del saldo ya actualizado.
+      setAccounts((prev) => prev.map((a) => (a.id === accountId ? { ...a, balance } : a)));
       await addMovement({
         accountId,
-        userId: user.id,
+        userId,
         date: todayISO(),
         amount: delta,
         description: `Ahorro de ${monthIdToLabel(monthId)}`,
       });
     }
 
-    await saveMonth(user.id, monthId, {
-      income,
-      savings,
-      fixedExpenses: monthData?.fixedExpenses ?? [],
-      createdAt: monthData?.createdAt ?? new Date().toISOString(),
-    });
-
-    if (accountIds.size > 0) setAccounts(await getAccounts(user.id));
-    setSaving(false);
+    if (accountIds.size > 0) setAccounts(await getAccounts(userId));
   }
 
   const totalIncome = income.fixed + income.variable + income.extras;
@@ -123,6 +145,8 @@ export default function DashboardPage() {
   if (loading) {
     return <div className="text-stone-500 dark:text-stone-400 text-sm mt-8 text-center">Cargando...</div>;
   }
+
+  if (loadError) return <LoadError error={loadError} />;
 
   const pct = (v: number) => (totalIncome > 0 ? Math.round((v / totalIncome) * 100) : 0);
 

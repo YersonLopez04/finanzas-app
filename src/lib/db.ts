@@ -60,6 +60,22 @@ function sb() {
   return getSupabase();
 }
 
+// Supabase no lanza excepciones: devuelve { error }. Sin revisarlo, un guardado
+// rechazado (sin conexión, sesión vencida, permisos) parece exitoso, y una
+// lectura fallida parece "no hay datos" que luego se guarda encima de los reales.
+export class DataError extends Error {}
+
+type QueryResult<T> = { data: T; error: null } | { data: null; error: { message: string } };
+
+function check<T>(res: QueryResult<T>, action: string): T {
+  if (res.error) {
+    console.error(`Supabase: no se pudo ${action}`, res.error);
+    throw new DataError(`No se pudo ${action}. Revisa tu conexión e inténtalo de nuevo.`);
+  }
+  return res.data as T;
+}
+
+interface MonthRow { id: string; income_fixed: number | string; income_variable: number | string; income_extras: number | string; created_at: string; }
 interface SavingRow { id: string; name: string; amount: number | string; account_id: string | null; }
 interface FixedExpenseRow { id: string; name: string; amount: number | string; paid: boolean; paid_date: string | null; due_day: number | null; tracked: boolean | null; order_index: number; }
 interface FixedExpenseEntryRow { id: string; fixed_expense_id: string; user_id: string; date: string; amount: number | string; note: string | null; created_at: string; }
@@ -84,19 +100,19 @@ interface MovementRow { id: string; account_id: string; user_id: string; date: s
 export async function getMonth(userId: string, monthId: string): Promise<MonthData | null> {
   if (DEMO_MODE) return demoStore.months[monthId] ?? null;
 
-  const { data: month } = await sb()
-    .from('months')
-    .select('*')
-    .eq('user_id', userId)
-    .eq('id', monthId)
-    .maybeSingle();
+  const month = check<MonthRow | null>(
+    await sb().from('months').select('*').eq('user_id', userId).eq('id', monthId).maybeSingle(),
+    'cargar el mes'
+  );
 
   if (!month) return null;
 
-  const [{ data: savings }, { data: fixed }] = await Promise.all([
+  const [savingsRes, fixedRes] = await Promise.all([
     sb().from('savings_allocations').select('*').eq('user_id', userId).eq('month_id', monthId).order('order_index'),
     sb().from('fixed_expenses').select('*').eq('user_id', userId).eq('month_id', monthId).order('order_index'),
   ]);
+  const savings = check(savingsRes, 'cargar los ahorros del mes');
+  const fixed = check(fixedRes, 'cargar los gastos fijos del mes');
 
   return {
     id: month.id,
@@ -126,45 +142,47 @@ export async function saveMonth(userId: string, monthId: string, data: Partial<M
     return;
   }
 
-  // Upsert month row
-  await sb().from('months').upsert({
-    user_id: userId,
-    id: monthId,
-    income_fixed: data.income?.fixed ?? 0,
-    income_variable: data.income?.variable ?? 0,
-    income_extras: data.income?.extras ?? 0,
-    created_at: data.createdAt ?? new Date().toISOString(),
-  });
+  check(
+    await sb().from('months').upsert({
+      user_id: userId,
+      id: monthId,
+      income_fixed: data.income?.fixed ?? 0,
+      income_variable: data.income?.variable ?? 0,
+      income_extras: data.income?.extras ?? 0,
+      created_at: data.createdAt ?? new Date().toISOString(),
+    }),
+    'guardar el mes'
+  );
 
-  // Replace savings allocations
+  // Ahorros y gastos fijos se guardan igual: primero upsert por id y recién
+  // después se borran las filas que el usuario quitó. Si el upsert falla, no se
+  // borra nada (antes se borraba todo el mes y luego se reinsertaba, y un fallo
+  // entre ambos pasos dejaba el mes sin ahorros). Mantener el id además evita
+  // que las cargas de seguimiento (fixed_expense_entries) queden huérfanas.
   if (data.savings) {
-    await sb().from('savings_allocations').delete().eq('user_id', userId).eq('month_id', monthId);
     if (data.savings.length > 0) {
-      await sb().from('savings_allocations').insert(
-        data.savings.map((s, i) => ({
-          user_id: userId,
-          month_id: monthId,
-          name: s.name,
-          amount: s.amount,
-          account_id: s.accountId ?? null,
-          order_index: i,
-        }))
+      check(
+        await sb().from('savings_allocations').upsert(
+          data.savings.map((s, i) => ({
+            id: s.id,
+            user_id: userId,
+            month_id: monthId,
+            name: s.name,
+            amount: s.amount,
+            account_id: s.accountId ?? null,
+            order_index: i,
+          }))
+        ),
+        'guardar los ahorros'
       );
     }
+    check(await deleteMonthRowsExcept('savings_allocations', userId, monthId, data.savings.map((s) => s.id)), 'guardar los ahorros');
   }
 
-  // Guarda gastos fijos preservando el id de cada fila (upsert en vez de
-  // borrar-todo-y-reinsertar): las cargas de seguimiento (fixed_expense_entries)
-  // referencian ese id por llave foránea y quedarían huérfanas si cambiara en
-  // cada guardado.
   if (data.fixedExpenses) {
-    const keepIds = data.fixedExpenses.map((f) => f.id);
-    let del = sb().from('fixed_expenses').delete().eq('user_id', userId).eq('month_id', monthId);
-    if (keepIds.length > 0) del = del.not('id', 'in', `(${keepIds.join(',')})`);
-    await del;
-
     if (data.fixedExpenses.length > 0) {
-      await sb().from('fixed_expenses').upsert(
+      check(
+        await sb().from('fixed_expenses').upsert(
         data.fixedExpenses.map((f, i) => ({
           id: f.id,
           user_id: userId,
@@ -177,9 +195,18 @@ export async function saveMonth(userId: string, monthId: string, data: Partial<M
           tracked: f.tracked ?? false,
           order_index: i,
         }))
+        ),
+        'guardar los gastos fijos'
       );
     }
+    check(await deleteMonthRowsExcept('fixed_expenses', userId, monthId, data.fixedExpenses.map((f) => f.id)), 'guardar los gastos fijos');
   }
+}
+
+function deleteMonthRowsExcept(table: 'savings_allocations' | 'fixed_expenses', userId: string, monthId: string, keepIds: string[]) {
+  let del = sb().from(table).delete().eq('user_id', userId).eq('month_id', monthId);
+  if (keepIds.length > 0) del = del.not('id', 'in', `(${keepIds.join(',')})`);
+  return del;
 }
 
 export async function listMonths(userId: string): Promise<MonthData[]> {
@@ -187,13 +214,15 @@ export async function listMonths(userId: string): Promise<MonthData[]> {
     return Object.values(demoStore.months).sort((a, b) => b.id.localeCompare(a.id));
   }
 
-  const [{ data: months }, { data: savings }, { data: fixed }] = await Promise.all([
+  const [monthsRes, savingsRes, fixedRes] = await Promise.all([
     sb().from('months').select('*').eq('user_id', userId).order('id', { ascending: false }),
     sb().from('savings_allocations').select('*').eq('user_id', userId).order('order_index'),
     sb().from('fixed_expenses').select('*').eq('user_id', userId).order('order_index'),
   ]);
+  const months = check(monthsRes, 'cargar el historial');
+  const savings = check(savingsRes, 'cargar el historial');
+  const fixed = check(fixedRes, 'cargar el historial');
 
-  type MonthRow = { id: string; income_fixed: number | string; income_variable: number | string; income_extras: number | string; created_at: string };
   type SavingRowWithMonth = SavingRow & { month_id: string };
   type FixedExpenseRowWithMonth = FixedExpenseRow & { month_id: string };
 
@@ -243,12 +272,15 @@ export async function getFixedExpenseEntries(userId: string, fixedExpenseId: str
       .filter((e) => e.fixedExpenseId === fixedExpenseId)
       .sort((a, b) => b.date.localeCompare(a.date));
   }
-  const { data } = await sb()
-    .from('fixed_expense_entries')
-    .select('*')
-    .eq('user_id', userId)
-    .eq('fixed_expense_id', fixedExpenseId)
-    .order('date', { ascending: false });
+  const data = check(
+    await sb()
+      .from('fixed_expense_entries')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('fixed_expense_id', fixedExpenseId)
+      .order('date', { ascending: false }),
+    'cargar las cargas del gasto'
+  );
   return ((data ?? []) as FixedExpenseEntryRow[]).map(mapFixedExpenseEntryRow);
 }
 
@@ -266,11 +298,10 @@ export async function getFixedExpenseEntryTotals(userId: string, fixedExpenseIds
       });
     return totals;
   }
-  const { data } = await sb()
-    .from('fixed_expense_entries')
-    .select('fixed_expense_id, amount')
-    .eq('user_id', userId)
-    .in('fixed_expense_id', fixedExpenseIds);
+  const data = check(
+    await sb().from('fixed_expense_entries').select('fixed_expense_id, amount').eq('user_id', userId).in('fixed_expense_id', fixedExpenseIds),
+    'cargar el avance de los gastos fijos'
+  );
   const totals: Record<string, number> = {};
   ((data ?? []) as { fixed_expense_id: string; amount: number | string }[]).forEach((row) => {
     totals[row.fixed_expense_id] = (totals[row.fixed_expense_id] ?? 0) + Number(row.amount);
@@ -283,13 +314,16 @@ export async function addFixedExpenseEntry(data: Omit<FixedExpenseEntry, 'id' | 
     demoStore.fixedExpenseEntries.unshift({ ...data, id: crypto.randomUUID(), createdAt: new Date().toISOString() });
     return;
   }
-  await sb().from('fixed_expense_entries').insert({
-    fixed_expense_id: data.fixedExpenseId,
-    user_id: data.userId,
-    date: data.date,
-    amount: data.amount,
-    note: data.note ?? '',
-  });
+  check(
+    await sb().from('fixed_expense_entries').insert({
+      fixed_expense_id: data.fixedExpenseId,
+      user_id: data.userId,
+      date: data.date,
+      amount: data.amount,
+      note: data.note ?? '',
+    }),
+    'guardar la carga'
+  );
 }
 
 export async function deleteFixedExpenseEntry(id: string) {
@@ -297,14 +331,14 @@ export async function deleteFixedExpenseEntry(id: string) {
     demoStore.fixedExpenseEntries = demoStore.fixedExpenseEntries.filter((e) => e.id !== id);
     return;
   }
-  await sb().from('fixed_expense_entries').delete().eq('id', id);
+  check(await sb().from('fixed_expense_entries').delete().eq('id', id), 'borrar la carga');
 }
 
 export async function getAllTransactions(userId: string): Promise<Transaction[]> {
   if (DEMO_MODE) {
     return demoStore.transactions.filter((t) => t.userId === userId);
   }
-  const { data } = await sb().from('transactions').select('*').eq('user_id', userId);
+  const data = check(await sb().from('transactions').select('*').eq('user_id', userId), 'cargar los gastos variables');
   return ((data ?? []) as TransactionRow[]).map(mapTransactionRow);
 }
 
@@ -330,12 +364,10 @@ export async function getTransactions(userId: string, monthId: string): Promise<
   if (DEMO_MODE) {
     return demoStore.transactions.filter((t) => t.monthId === monthId).sort((a, b) => b.date.localeCompare(a.date));
   }
-  const { data } = await sb()
-    .from('transactions')
-    .select('*')
-    .eq('user_id', userId)
-    .eq('month_id', monthId)
-    .order('date', { ascending: false });
+  const data = check(
+    await sb().from('transactions').select('*').eq('user_id', userId).eq('month_id', monthId).order('date', { ascending: false }),
+    'cargar los gastos variables'
+  );
 
   return ((data ?? []) as TransactionRow[]).map(mapTransactionRow);
 }
@@ -345,17 +377,20 @@ export async function addTransaction(data: Omit<Transaction, 'id' | 'createdAt'>
     demoStore.transactions.unshift({ ...data, id: crypto.randomUUID(), createdAt: new Date().toISOString() });
     return;
   }
-  await sb().from('transactions').insert({
-    user_id: data.userId,
-    month_id: data.monthId,
-    date: data.date,
-    amount: data.amount,
-    category: data.category,
-    description: data.description,
-    payment_method: data.paymentMethod ?? null,
-    shared: data.shared ?? false,
-    reimbursed_amount: data.reimbursedAmount ?? 0,
-  });
+  check(
+    await sb().from('transactions').insert({
+      user_id: data.userId,
+      month_id: data.monthId,
+      date: data.date,
+      amount: data.amount,
+      category: data.category,
+      description: data.description,
+      payment_method: data.paymentMethod ?? null,
+      shared: data.shared ?? false,
+      reimbursed_amount: data.reimbursedAmount ?? 0,
+    }),
+    'guardar el gasto'
+  );
 }
 
 export async function updateTransaction(id: string, data: Partial<Omit<Transaction, 'id' | 'userId' | 'createdAt'>>) {
@@ -372,7 +407,7 @@ export async function updateTransaction(id: string, data: Partial<Omit<Transacti
   if (data.paymentMethod !== undefined) row.payment_method = data.paymentMethod ?? null;
   if (data.shared !== undefined) row.shared = data.shared;
   if (data.reimbursedAmount !== undefined) row.reimbursed_amount = data.reimbursedAmount;
-  await sb().from('transactions').update(row).eq('id', id);
+  check(await sb().from('transactions').update(row).eq('id', id), 'guardar el gasto');
 }
 
 export async function deleteTransaction(id: string) {
@@ -380,7 +415,7 @@ export async function deleteTransaction(id: string) {
     demoStore.transactions = demoStore.transactions.filter((t) => t.id !== id);
     return;
   }
-  await sb().from('transactions').delete().eq('id', id);
+  check(await sb().from('transactions').delete().eq('id', id), 'borrar el gasto');
 }
 
 // ── Accounts ──────────────────────────────────────────────────────────────────
@@ -388,11 +423,7 @@ export async function deleteTransaction(id: string) {
 export async function getAccounts(userId: string): Promise<Account[]> {
   if (DEMO_MODE) return [...demoStore.accounts].sort((a, b) => a.order - b.order);
 
-  const { data } = await sb()
-    .from('accounts')
-    .select('*')
-    .eq('user_id', userId)
-    .order('order_index');
+  const data = check(await sb().from('accounts').select('*').eq('user_id', userId).order('order_index'), 'cargar tus cuentas');
 
   return ((data ?? []) as AccountRow[]).map((a) => ({
     id: a.id,
@@ -429,11 +460,11 @@ export async function saveAccount(userId: string, data: Omit<Account, 'id' | 'cr
   };
 
   if (data.id) {
-    await sb().from('accounts').update(row).eq('id', data.id);
+    check(await sb().from('accounts').update(row).eq('id', data.id), `actualizar la cuenta ${data.name}`);
     return data.id;
   }
-  const { data: inserted } = await sb().from('accounts').insert(row).select('id').single();
-  return inserted!.id as string;
+  const inserted = check<{ id: string }>(await sb().from('accounts').insert(row).select('id').single(), `crear la cuenta ${data.name}`);
+  return inserted.id;
 }
 
 export async function deleteAccount(userId: string, accountId: string) {
@@ -441,7 +472,7 @@ export async function deleteAccount(userId: string, accountId: string) {
     demoStore.accounts = demoStore.accounts.filter((a) => a.id !== accountId);
     return;
   }
-  await sb().from('accounts').delete().eq('id', accountId);
+  check(await sb().from('accounts').delete().eq('id', accountId), 'borrar la cuenta');
 }
 
 // ── Account Movements ─────────────────────────────────────────────────────────
@@ -450,12 +481,10 @@ export async function getMovements(userId: string, accountId: string): Promise<A
   if (DEMO_MODE) {
     return demoStore.movements.filter((m) => m.accountId === accountId).sort((a, b) => b.date.localeCompare(a.date));
   }
-  const { data } = await sb()
-    .from('account_movements')
-    .select('*')
-    .eq('user_id', userId)
-    .eq('account_id', accountId)
-    .order('date', { ascending: false });
+  const data = check(
+    await sb().from('account_movements').select('*').eq('user_id', userId).eq('account_id', accountId).order('date', { ascending: false }),
+    'cargar los movimientos'
+  );
 
   return ((data ?? []) as MovementRow[]).map((m) => ({
     id: m.id,
@@ -473,13 +502,16 @@ export async function addMovement(data: Omit<AccountMovement, 'id' | 'createdAt'
     demoStore.movements.unshift({ ...data, id: crypto.randomUUID(), createdAt: new Date().toISOString() });
     return;
   }
-  await sb().from('account_movements').insert({
-    user_id: data.userId,
-    account_id: data.accountId,
-    date: data.date,
-    amount: data.amount,
-    description: data.description,
-  });
+  check(
+    await sb().from('account_movements').insert({
+      user_id: data.userId,
+      account_id: data.accountId,
+      date: data.date,
+      amount: data.amount,
+      description: data.description,
+    }),
+    'guardar el movimiento'
+  );
 }
 
 export async function deleteMovement(id: string) {
@@ -487,7 +519,7 @@ export async function deleteMovement(id: string) {
     demoStore.movements = demoStore.movements.filter((m) => m.id !== id);
     return;
   }
-  await sb().from('account_movements').delete().eq('id', id);
+  check(await sb().from('account_movements').delete().eq('id', id), 'borrar el movimiento');
 }
 
 // ── Categorías ────────────────────────────────────────────────────────────────
@@ -497,15 +529,16 @@ interface CategoryRow { id: string; name: string; order_index: number; }
 export async function getCategories(userId: string): Promise<Category[]> {
   if (DEMO_MODE) return [...demoStore.categories].sort((a, b) => a.order - b.order);
 
-  const { data } = await sb().from('categories').select('*').eq('user_id', userId).order('order_index');
+  const data = check(await sb().from('categories').select('*').eq('user_id', userId).order('order_index'), 'cargar las categorías');
   let rows = (data ?? []) as CategoryRow[];
 
   // Primera vez del usuario: precarga las categorías sugeridas.
   if (rows.length === 0) {
-    await sb()
-      .from('categories')
-      .insert(DEFAULT_CATEGORIES.map((name, i) => ({ user_id: userId, name, order_index: i })));
-    const { data: seeded } = await sb().from('categories').select('*').eq('user_id', userId).order('order_index');
+    check(
+      await sb().from('categories').insert(DEFAULT_CATEGORIES.map((name, i) => ({ user_id: userId, name, order_index: i }))),
+      'crear las categorías'
+    );
+    const seeded = check(await sb().from('categories').select('*').eq('user_id', userId).order('order_index'), 'cargar las categorías');
     rows = (seeded ?? []) as CategoryRow[];
   }
 
@@ -518,8 +551,8 @@ export async function addCategory(userId: string, name: string, order: number): 
     demoStore.categories.push({ id, name, order });
     return id;
   }
-  const { data } = await sb().from('categories').insert({ user_id: userId, name, order_index: order }).select('id').single();
-  return data!.id as string;
+  const data = check<{ id: string }>(await sb().from('categories').insert({ user_id: userId, name, order_index: order }).select('id').single(), 'crear la categoría');
+  return data.id;
 }
 
 export async function deleteCategory(id: string) {
@@ -527,5 +560,5 @@ export async function deleteCategory(id: string) {
     demoStore.categories = demoStore.categories.filter((c) => c.id !== id);
     return;
   }
-  await sb().from('categories').delete().eq('id', id);
+  check(await sb().from('categories').delete().eq('id', id), 'borrar la categoría');
 }

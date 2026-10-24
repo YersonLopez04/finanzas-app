@@ -7,6 +7,7 @@ import { formatCurrency } from '@/lib/utils';
 import { Card, CardBody, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { reportError, LoadError } from '@/components/ui/ErrorToast';
 import { Select } from '@/components/ui/Select';
 import { Sparkline } from '@/components/ui/Sparkline';
 import type { Account, AccountMovement, AccountCurrency, AccountType } from '@/types';
@@ -50,35 +51,47 @@ function AccountCard({
   }
 
   async function handleToggle() {
-    if (!expanded) await loadMovements();
-    setExpanded((p) => !p);
+    try {
+      if (!expanded) await loadMovements();
+      setExpanded((p) => !p);
+    } catch (err) {
+      reportError(err);
+    }
   }
 
   async function handleAddMovement() {
     if (!movAmount) return;
     const delta = movType === 'deposit' ? Number(movAmount) : -Number(movAmount);
-    await addMovement({
-      accountId: account.id,
-      userId,
-      date: movDate,
-      amount: delta,
-      description: movDesc,
-    });
-    const newBalance = account.balance + delta;
-    await saveAccount(userId, { ...account, balance: newBalance });
-    onBalanceChange(newBalance);
-    setMovAmount('');
-    setMovDesc('');
-    setShowMovForm(false);
-    await loadMovements();
+    try {
+      await addMovement({
+        accountId: account.id,
+        userId,
+        date: movDate,
+        amount: delta,
+        description: movDesc,
+      });
+      const newBalance = account.balance + delta;
+      await saveAccount(userId, { ...account, balance: newBalance });
+      onBalanceChange(newBalance);
+      setMovAmount('');
+      setMovDesc('');
+      setShowMovForm(false);
+      await loadMovements();
+    } catch (err) {
+      reportError(err);
+    }
   }
 
   async function handleDeleteMovement(id: string, amount: number) {
-    await deleteMovement(id);
-    const newBalance = account.balance - amount;
-    await saveAccount(userId, { ...account, balance: newBalance });
-    onBalanceChange(newBalance);
-    setMovements((prev) => prev.filter((m) => m.id !== id));
+    try {
+      await deleteMovement(id);
+      const newBalance = account.balance - amount;
+      await saveAccount(userId, { ...account, balance: newBalance });
+      onBalanceChange(newBalance);
+      setMovements((prev) => prev.filter((m) => m.id !== id));
+    } catch (err) {
+      reportError(err);
+    }
   }
 
   return (
@@ -211,6 +224,7 @@ export default function AhorrosPage() {
   const { user } = useAuth();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<unknown>(null);
   const [showForm, setShowForm] = useState(false);
   const [exchangeRate, setExchangeRate] = useState(DEFAULT_EXCHANGE_RATE);
 
@@ -224,10 +238,10 @@ export default function AhorrosPage() {
 
   useEffect(() => {
     if (!user) return;
-    getAccounts(user.id).then((data) => {
-      setAccounts(data);
-      setLoading(false);
-    });
+    getAccounts(user.id)
+      .then(setAccounts)
+      .catch(setLoadError)
+      .finally(() => setLoading(false));
     const stored = localStorage.getItem(EXCHANGE_RATE_KEY);
     if (stored) setExchangeRate(Number(stored));
   }, [user]);
@@ -241,28 +255,36 @@ export default function AhorrosPage() {
   async function handleAdd() {
     if (!user || !name) return;
     setSaving(true);
-    await saveAccount(user.id, {
-      userId: user.id,
-      name,
-      currency,
-      type,
-      balance: Number(balance),
-      note,
-      order: accounts.length,
-    });
-    const updated = await getAccounts(user.id);
-    setAccounts(updated);
-    setName('');
-    setBalance('');
-    setNote('');
-    setSaving(false);
-    setShowForm(false);
+    try {
+      await saveAccount(user.id, {
+        userId: user.id,
+        name,
+        currency,
+        type,
+        balance: Number(balance),
+        note,
+        order: accounts.length,
+      });
+      setName('');
+      setBalance('');
+      setNote('');
+      setShowForm(false);
+      setAccounts(await getAccounts(user.id));
+    } catch (err) {
+      reportError(err);
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function handleDelete(accountId: string) {
     if (!user) return;
-    await deleteAccount(user.id, accountId);
-    setAccounts((prev) => prev.filter((a) => a.id !== accountId));
+    try {
+      await deleteAccount(user.id, accountId);
+      setAccounts((prev) => prev.filter((a) => a.id !== accountId));
+    } catch (err) {
+      reportError(err);
+    }
   }
 
   function handleBalanceChange(accountId: string, newBalance: number) {
@@ -288,6 +310,7 @@ export default function AhorrosPage() {
   })).filter((t) => t.total > 0);
 
   if (loading) return <div className="text-stone-500 dark:text-stone-400 text-sm mt-8 text-center">Cargando...</div>;
+  if (loadError) return <LoadError error={loadError} />;
 
   return (
     <div className="max-w-2xl mx-auto flex flex-col gap-6">

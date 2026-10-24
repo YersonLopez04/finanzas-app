@@ -10,6 +10,7 @@ import { MonthPicker } from '@/components/layout/MonthPicker';
 import { Card, CardBody, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { reportError, LoadError } from '@/components/ui/ErrorToast';
 import { Select } from '@/components/ui/Select';
 import type { Transaction, PaymentMethod, Category } from '@/types';
 import { PAYMENT_METHODS } from '@/types';
@@ -48,6 +49,7 @@ function GastosVariablesContent() {
   const [monthId, setMonthId] = useState(getCurrentMonthId());
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<unknown>(null);
   const [showForm, setShowForm] = useState(() => searchParams.get('quick') === '1');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -67,23 +69,34 @@ function GastosVariablesContent() {
   useEffect(() => {
     if (!user) return;
     setLoading(true);
-    Promise.all([getTransactions(user.id, monthId), getCategories(user.id)]).then(([txs, cats]) => {
-      setTransactions(txs);
-      setCategories(cats);
-      setLoading(false);
-    });
+    setLoadError(null);
+    Promise.all([getTransactions(user.id, monthId), getCategories(user.id)])
+      .then(([txs, cats]) => {
+        setTransactions(txs);
+        setCategories(cats);
+      })
+      .catch(setLoadError)
+      .finally(() => setLoading(false));
   }, [user, monthId]);
 
   async function handleAddCategory() {
     if (!user || !newCategoryName.trim()) return;
-    await addCategory(user.id, newCategoryName.trim(), categories.length);
-    setCategories(await getCategories(user.id));
-    setNewCategoryName('');
+    try {
+      await addCategory(user.id, newCategoryName.trim(), categories.length);
+      setCategories(await getCategories(user.id));
+      setNewCategoryName('');
+    } catch (err) {
+      reportError(err);
+    }
   }
 
   async function handleDeleteCategory(id: string) {
-    await deleteCategory(id);
-    setCategories((prev) => prev.filter((c) => c.id !== id));
+    try {
+      await deleteCategory(id);
+      setCategories((prev) => prev.filter((c) => c.id !== id));
+    } catch (err) {
+      reportError(err);
+    }
   }
 
   function openNewForm() {
@@ -119,22 +132,30 @@ function GastosVariablesContent() {
       reimbursedAmount: form.shared ? Number(form.reimbursedAmount || 0) : 0,
     };
 
-    if (editingId) {
-      await updateTransaction(editingId, payload);
-    } else {
-      await addTransaction({ userId: user.id, monthId, ...payload });
+    try {
+      if (editingId) {
+        await updateTransaction(editingId, payload);
+      } else {
+        await addTransaction({ userId: user.id, monthId, ...payload });
+      }
+      setShowForm(false);
+      setEditingId(null);
+      setTransactions(await getTransactions(user.id, monthId));
+    } catch (err) {
+      // El formulario queda abierto con lo escrito, para reintentar sin perderlo.
+      reportError(err);
+    } finally {
+      setSaving(false);
     }
-
-    const updated = await getTransactions(user.id, monthId);
-    setTransactions(updated);
-    setSaving(false);
-    setShowForm(false);
-    setEditingId(null);
   }
 
   async function handleDelete(id: string) {
-    await deleteTransaction(id);
-    setTransactions((prev) => prev.filter((t) => t.id !== id));
+    try {
+      await deleteTransaction(id);
+      setTransactions((prev) => prev.filter((t) => t.id !== id));
+    } catch (err) {
+      reportError(err);
+    }
   }
 
   const total = transactions.reduce((s, t) => s + t.amount, 0);
@@ -148,6 +169,7 @@ function GastosVariablesContent() {
     .filter((x) => x.total > 0);
 
   if (loading) return <div className="text-stone-500 dark:text-stone-400 text-sm mt-8 text-center">Cargando...</div>;
+  if (loadError) return <LoadError error={loadError} />;
 
   return (
     <div className="max-w-2xl mx-auto flex flex-col gap-6">

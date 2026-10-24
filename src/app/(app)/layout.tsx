@@ -6,6 +6,7 @@ import { useAuth } from '@/lib/auth-context';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { BottomNav } from '@/components/layout/BottomNav';
 import { MobileTopBar } from '@/components/layout/MobileTopBar';
+import { ErrorToast } from '@/components/ui/ErrorToast';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -32,6 +33,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
       {/* Bottom nav — solo mobile */}
       <BottomNav />
+      <ErrorToast />
     </div>
   );
 }

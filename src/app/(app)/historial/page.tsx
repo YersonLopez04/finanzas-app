@@ -6,6 +6,7 @@ import { listMonths, getAllTransactions } from '@/lib/db';
 import { formatCurrency, monthIdToLabel } from '@/lib/utils';
 import { categoryBarClass } from '@/lib/categoryColors';
 import { Card, CardBody, CardHeader } from '@/components/ui/Card';
+import { LoadError } from '@/components/ui/ErrorToast';
 import { Select } from '@/components/ui/Select';
 import type { MonthData, Transaction } from '@/types';
 import { History, Tags } from 'lucide-react';
@@ -31,28 +32,31 @@ export default function HistorialPage() {
   const [summaries, setSummaries] = useState<MonthSummary[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<unknown>(null);
   const [range, setRange] = useState('6');
 
   useEffect(() => {
     if (!user) return;
-    Promise.all([listMonths(user.id), getAllTransactions(user.id)]).then(([months, txs]) => {
-      const gvByMonth = txs.reduce<Record<string, number>>((acc, t) => {
-        acc[t.monthId] = (acc[t.monthId] ?? 0) + t.amount;
-        return acc;
-      }, {});
+    Promise.all([listMonths(user.id), getAllTransactions(user.id)])
+      .then(([months, txs]) => {
+        const gvByMonth = txs.reduce<Record<string, number>>((acc, t) => {
+          acc[t.monthId] = (acc[t.monthId] ?? 0) + t.amount;
+          return acc;
+        }, {});
 
-      const rows: MonthSummary[] = months.map((m: MonthData) => {
-        const income = m.income.fixed + m.income.variable + m.income.extras;
-        const savings = m.savings.reduce((s, a) => s + (a.amount || 0), 0);
-        const fixed = m.fixedExpenses.reduce((s, f) => s + (f.amount || 0), 0);
-        const variable = gvByMonth[m.id] ?? 0;
-        return { id: m.id, income, savings, fixed, variable, remaining: income - savings - fixed - variable };
-      });
+        const rows: MonthSummary[] = months.map((m: MonthData) => {
+          const income = m.income.fixed + m.income.variable + m.income.extras;
+          const savings = m.savings.reduce((s, a) => s + (a.amount || 0), 0);
+          const fixed = m.fixedExpenses.reduce((s, f) => s + (f.amount || 0), 0);
+          const variable = gvByMonth[m.id] ?? 0;
+          return { id: m.id, income, savings, fixed, variable, remaining: income - savings - fixed - variable };
+        });
 
-      setSummaries(rows);
-      setTransactions(txs);
-      setLoading(false);
-    });
+        setSummaries(rows);
+        setTransactions(txs);
+      })
+      .catch(setLoadError)
+      .finally(() => setLoading(false));
   }, [user]);
 
   const rangedSummaries = useMemo(() => {
@@ -74,6 +78,7 @@ export default function HistorialPage() {
   }, [transactions, rangedMonthIds]);
 
   if (loading) return <div className="text-stone-500 dark:text-stone-400 text-sm mt-8 text-center">Cargando...</div>;
+  if (loadError) return <LoadError error={loadError} />;
 
   const avg = (key: keyof Omit<MonthSummary, 'id'>) =>
     rangedSummaries.length ? rangedSummaries.reduce((s, m) => s + m[key], 0) / rangedSummaries.length : 0;

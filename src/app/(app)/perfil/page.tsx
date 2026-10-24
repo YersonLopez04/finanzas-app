@@ -9,6 +9,8 @@ import { notificationsSupported, notificationsEnabled, requestNotificationPermis
 import { Card, CardBody, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { User, Download, Upload, LogOut, Bell, BellOff } from 'lucide-react';
+import { DataError } from '@/lib/db';
+import { reportError } from '@/components/ui/ErrorToast';
 
 export default function PerfilPage() {
   const { user } = useAuth();
@@ -33,6 +35,8 @@ export default function PerfilPage() {
     setExporting(true);
     try {
       await exportAllData(user.id);
+    } catch (err) {
+      reportError(err);
     } finally {
       setExporting(false);
     }
@@ -51,8 +55,13 @@ export default function PerfilPage() {
     try {
       const summary = await importAllData(user.id, file);
       setImportResult(summary);
-    } catch {
-      setImportError('No se pudo leer el archivo. Verifica que sea un backup exportado desde esta misma app.');
+    } catch (err) {
+      // Un fallo al guardar no es culpa del archivo: el import pudo quedar a medias.
+      setImportError(
+        err instanceof DataError
+          ? `${err.message} Parte del backup pudo quedar importada; revisa antes de reintentar para no duplicar datos.`
+          : 'No se pudo leer el archivo. Verifica que sea un backup exportado desde esta misma app.'
+      );
     } finally {
       setImporting(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
