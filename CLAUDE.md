@@ -18,6 +18,9 @@ App personal de finanzas de Yerson (y quizá su círculo cercano) que reemplaza 
 - `src/lib/totals.ts` — **única** fuente de los cálculos de dinero (restante, totales, "Te deben").
 - `src/components/ui/ErrorToast.tsx` — aviso global de errores (`reportError`) y pantalla de carga fallida (`LoadError`).
 - `src/components/ui/UndoToast.tsx` — aviso "Deshacer" de los borrados (`showUndo`).
+- `src/lib/due.ts` — **única** regla de vencimiento de gastos fijos (`dueStatus`: venció, hoy, mañana…). La usan Resumen y Gastos fijos.
+- `src/components/ui/Sheet.tsx` — hoja inferior (teléfono) / ventana centrada (escritorio). `Switch.tsx` y `AmountInput.tsx` son sus piezas.
+- `src/lib/quickAdd.ts` — eventos entre el + de la barra y la hoja de registro rápido (el + se vuelve × y la cierra).
 - `src/app/(app)/*` — pantallas: dashboard (Resumen), gastos-fijos, gastos-variables, ahorros, historial, perfil.
 - `src/lib/export.ts` / `import.ts` — respaldo CSV.
 - `supabase/schema.sql` — esquema completo para una base nueva; `supabase/migrations/` — cambios incrementales.
@@ -40,12 +43,14 @@ Al agregar una columna: migración nueva + actualizar `schema.sql` + tipos + `db
 - **Guardar listas = upsert por id primero, borrar las filas quitadas después.** Nunca borrar todo y reinsertar: un fallo en medio deja el mes vacío y rompe llaves foráneas.
 - **Cada pantalla guarda solo lo que edita.** Resumen manda `fixedExpenses: undefined`; Gastos fijos manda `savings: undefined`. Reenviar copias viejas pisa cambios.
 - **Borrar siempre con deshacer** (`showUndo`): la vista quita el elemento al instante y el borrado real (`onCommit`) espera 5 s. Excepción: los movimientos de cuenta se borran al instante y deshacer los vuelve a registrar, porque también mueven el saldo. Si se cierra la app dentro de esos 5 s, el borrado no ocurre (lado seguro).
+- **Gastos fijos se guardan solos**: cada cambio manda la lista completa en una fila de guardados (`queueSave`), para que uno viejo nunca pise a uno nuevo. Un gasto borrado sigue enviándose hasta que vence el deshacer: si no, otro guardado lo borraría antes y se perderían sus cargas (se borran en cascada).
 - **Ids estables** (`crypto.randomUUID()`), nunca la posición en un arreglo.
 - **Ahorros vinculados a cuentas**: Resumen aplica a la cuenta solo la diferencia contra lo último guardado. Primero se guarda el mes y luego los saldos (al revés, reintentar sumaba dos veces).
 
 ## Decisiones del dueño
 
 - **Gasto compartido** (2026-10-24): cuesta `monto − lo que ya me devolvieron`. Lo que aún me deben sigue contando como gasto hasta que me lo paguen. "Te deben" = `monto − mi parte − lo que ya me pagaron`. Sin "mi parte" (gastos antiguos) se asume que te deben todo.
+- **Gastos fijos y registro rápido, opción B** (2026-10-25, muestra en `.impeccable/mocks/fijos-y-registro.html`): fijos en secciones Por pagar · Presupuestos · Pagados, sin botón Guardar, editar en hoja. Registro rápido: monto y categoría a la vista; fecha (Hoy), método, nota y compartido plegados en una fila. La categoría empieza sin elegir a propósito.
 - Cambios visuales: primero una muestra HTML con modo día y noche a 375 px, aprobada por el dueño; recién después se toca la app.
 
 ## Cómo probar

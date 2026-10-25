@@ -1,0 +1,573 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Muestra: Gastos fijos y registro rápido</title>
+<style>
+  * { box-sizing: border-box; }
+  :root {
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    --ease-sheet: cubic-bezier(0.32, 0.72, 0, 1);
+    --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+    font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
+  }
+  body { margin: 0; background: #e7e5e4; color: #1c1917; }
+  .page { max-width: 1040px; margin: 0 auto; padding: 24px 16px 64px; }
+  h1.page-title { font-size: 22px; margin: 0 0 4px; }
+  .lead { margin: 0 0 20px; color: #57534e; font-size: 14px; line-height: 1.5; max-width: 70ch; }
+  .controls { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; }
+  .seg { display: inline-flex; background: #d6d3d1; border-radius: 999px; padding: 3px; gap: 2px; align-self: flex-start; }
+  .seg button { border: 0; background: transparent; padding: 8px 14px; border-radius: 999px; font: inherit; font-size: 14px; font-weight: 600; color: #44403c; cursor: pointer; }
+  .seg button[aria-pressed="true"] { background: #fff; color: #1c1917; box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+  .variants { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; }
+  .variant { text-align: left; border: 2px solid transparent; background: #fff; border-radius: 16px; padding: 12px 14px; font: inherit; cursor: pointer; color: inherit; }
+  .variant[aria-pressed="true"] { border-color: #1e293b; }
+  .variant strong { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+  .variant span { display: block; margin-top: 4px; font-size: 13px; color: #57534e; line-height: 1.45; }
+  .badge { font-size: 11px; font-weight: 700; background: #dcfce7; color: #166534; padding: 2px 8px; border-radius: 999px; }
+  .why { background: #fff; border-radius: 16px; padding: 12px 14px; font-size: 13px; color: #44403c; line-height: 1.5; }
+  .why b { color: #1c1917; }
+  .stage { display: flex; flex-wrap: wrap; gap: 28px; justify-content: center; }
+  .col { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  .col-label { font-size: 13px; font-weight: 700; color: #57534e; text-transform: uppercase; letter-spacing: .06em; }
+
+  /* ── Teléfono ─────────────────────────────────────────── */
+  .phone { width: 375px; max-width: calc(100vw - 32px); height: 780px; border-radius: 44px; overflow: hidden; position: relative;
+    border: 10px solid #1c1917; background: var(--bg); color: var(--text); box-shadow: 0 20px 50px rgba(0,0,0,.18); isolation: isolate; }
+  .phone.light {
+    --bg: #F7F6F3; --card: #ffffff; --line: #ece9e5; --text: #1c1917; --muted: #6b645e; --faint: #a8a29e;
+    --field: #f8f7f5; --field-line: #e7e5e4; --primary: #1e293b; --on-primary: #ffffff; --nav: #ffffff;
+    --paid: #047857; --paid-bg: #d1fae5; --due: #92400e; --due-bg: #fef3c7; --late: #be123c; --late-bg: #ffe4e6;
+    --track: #0284c7; --track-bg: #e0f2fe; --bar: #ece9e5; --scrim: rgba(28,25,23,.35); --hero: #1e293b; --hero-text: #f8fafc; --hero-muted: #cbd5e1;
+    --toast: #292524; --toast-text: #fafaf9; --toast-action: #7dd3fc;
+  }
+  .phone.dark {
+    --bg: #0c0a09; --card: #1c1917; --line: #292524; --text: #f5f5f4; --muted: #a8a29e; --faint: #78716c;
+    --field: #231f1d; --field-line: #3a3431; --primary: #e2e8f0; --on-primary: #0f172a; --nav: #1c1917;
+    --paid: #6ee7b7; --paid-bg: rgba(16,185,129,.16); --due: #fcd34d; --due-bg: rgba(245,158,11,.16); --late: #fda4af; --late-bg: rgba(244,63,94,.16);
+    --track: #7dd3fc; --track-bg: rgba(14,165,233,.16); --bar: #292524; --scrim: rgba(0,0,0,.55); --hero: #1e293b; --hero-text: #f8fafc; --hero-muted: #cbd5e1;
+    --toast: #f5f5f4; --toast-text: #1c1917; --toast-action: #0369a1;
+  }
+  .status { height: 44px; display: flex; align-items: center; justify-content: space-between; padding: 0 26px; font-size: 14px; font-weight: 600; }
+  .scroll { position: absolute; inset: 44px 0 0; overflow-y: auto; padding: 4px 16px 110px; scrollbar-width: none; }
+  .scroll::-webkit-scrollbar { display: none; }
+  .topbar { display: flex; align-items: center; justify-content: space-between; margin: 6px 0 14px; }
+  .topbar h2 { font-size: 20px; margin: 0; letter-spacing: -.01em; }
+  .month { display: flex; align-items: center; gap: 2px; font-size: 14px; font-weight: 600; }
+  .icon-btn { width: 36px; height: 36px; display: grid; place-items: center; border: 0; background: transparent; color: var(--muted); border-radius: 999px; cursor: pointer; }
+  svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+
+  .card { background: var(--card); border-radius: 20px; }
+  .summary { padding: 16px 18px; margin-bottom: 18px; background: var(--hero); color: var(--hero-text); }
+  .summary .label { font-size: 12px; color: var(--hero-muted); }
+  .summary .big { font-size: 32px; font-weight: 750; letter-spacing: -.02em; margin: 2px 0 10px; font-variant-numeric: tabular-nums; }
+  .summary .bar { height: 6px; border-radius: 99px; background: rgba(255,255,255,.14); overflow: hidden; }
+  .summary .bar i { display: block; height: 100%; background: #6ee7b7; border-radius: 99px; transform-origin: left; transition: transform .35s var(--ease-out); }
+  .summary .foot { display: flex; justify-content: space-between; margin-top: 8px; font-size: 12px; color: var(--hero-muted); }
+  .autosave { font-size: 12px; color: var(--muted); margin: -8px 2px 14px; display: flex; gap: 6px; align-items: center; }
+
+  .section-title { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin: 18px 4px 8px; display: flex; justify-content: space-between; }
+  .list { padding: 4px 0; }
+  .row { display: flex; align-items: center; gap: 8px; padding: 6px 14px 6px 6px; min-height: 60px; position: relative; cursor: pointer; border-radius: 16px; }
+  .row + .row::before { content: ''; position: absolute; top: 0; left: 58px; right: 14px; border-top: 1px solid var(--line); }
+  .row:active { background: var(--field); }
+  .check { width: 44px; height: 44px; display: grid; place-items: center; border: 0; background: transparent; padding: 0; cursor: pointer; position: relative; flex-shrink: 0; }
+  .check .ring { width: 26px; height: 26px; border-radius: 99px; border: 2px solid var(--faint); display: grid; place-items: center; position: relative; overflow: hidden; color: #fff; transition: transform .18s var(--ease-out); }
+  .check:active .ring { transform: scale(.88); }
+  .check .ring::after { content: ''; position: absolute; inset: 0; background: var(--paid); clip-path: circle(0% at var(--x, 50%) var(--y, 50%)); }
+  .check.on .ring { border-color: var(--paid); }
+  .check.on .ring::after { clip-path: circle(150% at var(--x, 50%) var(--y, 50%)); }
+  .check.on.animate .ring::after { animation: fill-in .38s var(--ease-out); }
+  .check .ring svg { width: 15px; height: 15px; stroke-width: 3; position: relative; z-index: 1; opacity: 0; transform: scale(.4); }
+  .phone.dark .check .ring svg { color: #052e16; }
+  .check.on .ring svg { opacity: 1; transform: scale(1); }
+  .check.on.animate .ring svg { animation: pop .38s var(--spring) .08s both; }
+  @keyframes fill-in { from { clip-path: circle(0% at var(--x, 50%) var(--y, 50%)); } }
+  @keyframes pop { from { opacity: 0; transform: scale(.4); } }
+  .track-ic { width: 44px; height: 44px; display: grid; place-items: center; color: var(--track); flex-shrink: 0; }
+  .track-ic span { width: 30px; height: 30px; border-radius: 99px; display: grid; place-items: center; background: var(--track-bg); }
+  .grow { flex: 1; min-width: 0; }
+  .name { font-size: 15px; font-weight: 600; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .meta { font-size: 12.5px; color: var(--muted); margin-top: 2px; display: flex; align-items: center; gap: 4px; }
+  .meta svg { width: 13px; height: 13px; }
+  .pill { font-size: 11.5px; font-weight: 700; padding: 2px 8px; border-radius: 99px; display: inline-flex; align-items: center; gap: 4px; }
+  .pill.due { background: var(--due-bg); color: var(--due); }
+  .pill.late { background: var(--late-bg); color: var(--late); }
+  .meta.paid { color: var(--paid); }
+  .amount { font-size: 15px; font-weight: 650; font-variant-numeric: tabular-nums; text-align: right; }
+  .row.is-paid .name, .row.is-paid .amount { color: var(--muted); font-weight: 500; }
+  .mini-bar { height: 5px; background: var(--bar); border-radius: 99px; margin-top: 6px; overflow: hidden; }
+  .mini-bar i { display: block; height: 100%; background: var(--track); border-radius: 99px; }
+  .add-entry { border: 0; background: var(--track-bg); color: var(--track); font: inherit; font-size: 12.5px; font-weight: 700; padding: 0 12px; height: 32px; border-radius: 99px; cursor: pointer; margin-top: 4px; }
+  .add-row { width: 100%; margin-top: 12px; border: 1.5px dashed var(--field-line); background: transparent; color: var(--muted); font: inherit; font-size: 14px; font-weight: 600; height: 48px; border-radius: 16px; display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; }
+
+  /* ── Barra inferior ─────────────────────────────────────── */
+  .nav { position: absolute; left: 0; right: 0; bottom: 0; height: 78px; background: var(--nav); border-top: 1px solid var(--line); display: flex; align-items: flex-start; padding-top: 6px; z-index: 5; }
+  .nav a { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 11px; color: var(--muted); text-decoration: none; padding-top: 4px; }
+  .nav a.active { color: var(--text); font-weight: 700; }
+  .nav a svg { width: 20px; height: 20px; }
+  .fab-wrap { flex: 1; display: flex; justify-content: center; }
+  .fab { width: 54px; height: 54px; border-radius: 99px; border: 0; background: var(--primary); color: var(--on-primary); display: grid; place-items: center; transform: translateY(-14px); box-shadow: 0 8px 20px rgba(15,23,42,.28); cursor: pointer; transition: transform .38s var(--spring); }
+  .fab:active { transform: translateY(-14px) scale(.94); }
+  .fab svg { width: 24px; height: 24px; stroke-width: 2.5; transition: transform .38s var(--spring); }
+  .fab.open svg { transform: rotate(45deg); }
+
+  /* ── Hoja inferior ──────────────────────────────────────── */
+  .scrim { position: absolute; inset: 0; background: var(--scrim); z-index: 3; }
+  .scrim.enter { animation: fade .3s ease-out; }
+  .sheet { position: absolute; left: 0; right: 0; bottom: 78px; z-index: 4; background: var(--card); border-radius: 26px 26px 0 0; padding: 8px 18px 16px; max-height: calc(100% - 120px); overflow-y: auto; scrollbar-width: none; box-shadow: 0 -10px 30px rgba(0,0,0,.12); }
+  .sheet.over-nav { bottom: 0; padding-bottom: 28px; z-index: 6; }
+  .sheet.enter { animation: sheet-in .42s var(--ease-sheet); }
+  @keyframes sheet-in { from { transform: translateY(100%); } }
+  @keyframes fade { from { opacity: 0; } }
+  .grabber { width: 38px; height: 5px; border-radius: 99px; background: var(--field-line); margin: 0 auto 10px; }
+  .sheet-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .sheet-head h3 { margin: 0; font-size: 17px; }
+  .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+  .field > span { font-size: 13px; font-weight: 600; color: var(--muted); }
+  .input { height: 46px; border-radius: 14px; border: 1px solid var(--field-line); background: var(--field); color: var(--text); padding: 0 14px; font: inherit; font-size: 16px; width: 100%; }
+  .input:focus { outline: 2px solid color-mix(in srgb, var(--primary) 40%, transparent); outline-offset: 1px; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .toggle-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; cursor: pointer; }
+  .toggle-row .grow span { display: block; font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+  .switch { width: 46px; height: 28px; border-radius: 99px; background: var(--field-line); position: relative; flex-shrink: 0; border: 0; cursor: pointer; transition: background .2s; }
+  .switch::after { content: ''; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 99px; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.25); transition: transform .3s var(--spring); }
+  .switch[aria-checked="true"] { background: var(--paid); }
+  .switch[aria-checked="true"]::after { transform: translateX(18px); }
+  .actions { display: flex; gap: 10px; margin-top: 6px; }
+  .btn { height: 50px; border-radius: 99px; border: 0; font: inherit; font-size: 15px; font-weight: 700; cursor: pointer; padding: 0 18px; transition: transform .15s var(--ease-out); }
+  .btn:active { transform: scale(.97); }
+  .btn.primary { background: var(--primary); color: var(--on-primary); flex: 1; }
+  .btn.primary:disabled { opacity: .45; cursor: default; }
+  .btn.danger { background: var(--late-bg); color: var(--late); }
+
+  /* ── Registro rápido ────────────────────────────────────── */
+  .amount-box { display: flex; align-items: baseline; justify-content: center; gap: 6px; padding: 6px 0 14px; }
+  .amount-box b { font-size: 26px; color: var(--muted); font-weight: 600; }
+  .amount-input { border: 0; background: transparent; color: var(--text); font: inherit; font-size: 48px; font-weight: 750; letter-spacing: -.02em; width: 4ch; field-sizing: content; min-width: 1.2ch; max-width: 7ch; text-align: left; font-variant-numeric: tabular-nums; padding: 0; }
+  .amount-input::placeholder { color: var(--faint); }
+  .amount-input:focus { outline: none; }
+  .label-sm { font-size: 13px; font-weight: 600; color: var(--muted); margin: 4px 2px 8px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+  .chip { border: 0; font: inherit; font-size: 14px; font-weight: 600; height: 40px; padding: 0 14px; border-radius: 99px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; background: var(--field); color: var(--text); box-shadow: inset 0 0 0 1px var(--field-line); transition: transform .15s var(--ease-out); }
+  .chip:active { transform: scale(.95); }
+  .chip[aria-pressed="true"] { background: var(--primary); color: var(--on-primary); box-shadow: none; }
+  .chip svg { width: 15px; height: 15px; stroke-width: 3; }
+  .cat { background: var(--c-bg); color: var(--c-fg); box-shadow: none; }
+  .cat[aria-pressed="true"] { background: var(--c-bg); color: var(--c-fg); box-shadow: inset 0 0 0 2px var(--c-fg); }
+  .light .c-amber { --c-bg: #fef3c7; --c-fg: #92400e; } .dark .c-amber { --c-bg: rgba(245,158,11,.16); --c-fg: #fcd34d; }
+  .light .c-blue { --c-bg: #dbeafe; --c-fg: #1d4ed8; } .dark .c-blue { --c-bg: rgba(59,130,246,.18); --c-fg: #93c5fd; }
+  .light .c-sky { --c-bg: #e0f2fe; --c-fg: #0369a1; } .dark .c-sky { --c-bg: rgba(14,165,233,.16); --c-fg: #7dd3fc; }
+  .light .c-stone { --c-bg: #f0eeeb; --c-fg: #57534e; } .dark .c-stone { --c-bg: #292524; --c-fg: #d6d3d1; }
+  .light .c-purple { --c-bg: #f3e8ff; --c-fg: #7e22ce; } .dark .c-purple { --c-bg: rgba(168,85,247,.18); --c-fg: #d8b4fe; }
+  .light .c-green { --c-bg: #dcfce7; --c-fg: #15803d; } .dark .c-green { --c-bg: rgba(34,197,94,.16); --c-fg: #86efac; }
+  .light .c-rose { --c-bg: #ffe4e6; --c-fg: #be123c; } .dark .c-rose { --c-bg: rgba(244,63,94,.16); --c-fg: #fda4af; }
+  .light .c-gray { --c-bg: #f3f4f6; --c-fg: #4b5563; } .dark .c-gray { --c-bg: rgba(107,114,128,.2); --c-fg: #d1d5db; }
+  .details-row { display: flex; align-items: center; gap: 8px; width: 100%; border: 0; background: var(--field); color: var(--text); border-radius: 14px; padding: 0 12px; height: 46px; font: inherit; font-size: 14px; cursor: pointer; margin-bottom: 14px; text-align: left; }
+  .details-row .grow { color: var(--muted); }
+  .details-row svg { transition: transform .3s var(--ease-out); }
+  .details-row.open svg.chev { transform: rotate(180deg); }
+  .owed { font-size: 13px; color: var(--muted); margin: -4px 2px 12px; }
+  .owed b { color: var(--due); }
+  .tx { display: flex; align-items: center; gap: 12px; padding: 12px 14px; }
+  .tx + .tx { border-top: 1px solid var(--line); }
+  .tx .dot { width: 10px; height: 10px; border-radius: 99px; background: var(--c-fg); flex-shrink: 0; }
+  .tx.fresh { animation: fresh 1.2s ease-out; }
+  @keyframes fresh { from { background: var(--paid-bg); } }
+
+  .toast { position: absolute; left: 14px; right: 14px; bottom: 92px; z-index: 7; background: var(--toast); color: var(--toast-text); border-radius: 16px; padding: 6px 6px 6px 16px; display: flex; align-items: center; gap: 8px; font-size: 14px; box-shadow: 0 8px 24px rgba(0,0,0,.2); animation: toast-in .3s var(--ease-out); }
+  .toast button { border: 0; background: transparent; color: var(--toast-action); font: inherit; font-weight: 700; padding: 0 12px; height: 40px; border-radius: 99px; cursor: pointer; }
+  @keyframes toast-in { from { transform: translateY(12px); opacity: 0; } }
+
+  /* ── Contraste ─────────────────────────────────────────── */
+  table.contrast { width: 375px; max-width: calc(100vw - 32px); border-collapse: collapse; font-size: 12px; background: #fff; border-radius: 14px; overflow: hidden; }
+  table.contrast th, table.contrast td { padding: 6px 10px; text-align: left; border-bottom: 1px solid #f0eeeb; }
+  table.contrast th { background: #f5f5f4; font-weight: 700; color: #44403c; }
+  table.contrast td.ok { color: #166534; font-weight: 700; }
+  table.contrast td.bad { color: #b91c1c; font-weight: 700; }
+  .swatch { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -2px; margin-right: 4px; border: 1px solid rgba(0,0,0,.15); }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1 class="page-title">Muestra: Gastos fijos y registro rápido</h1>
+  <p class="lead">Es interactiva: marca pagos, toca una fila para editarla, usa «+ Carga» en Gasolina y registra un gasto con el botón +. Los dos teléfonos (día y noche) comparten el mismo estado. Debajo de cada uno se calcula el contraste de los textos clave. Los datos son de ejemplo; nada se guarda.</p>
+
+  <div class="controls">
+    <div class="seg" role="group" aria-label="Pantalla">
+      <button data-screen="fijos" aria-pressed="true">Gastos fijos</button>
+      <button data-screen="registro" aria-pressed="false">Registro rápido</button>
+    </div>
+    <div class="variants" id="variants"></div>
+    <div class="why" id="why"></div>
+  </div>
+
+  <div class="stage">
+    <div class="col"><div class="col-label">Día</div><div class="phone light" data-theme="light"></div><table class="contrast" data-for="light"></table></div>
+    <div class="col"><div class="col-label">Noche</div><div class="phone dark" data-theme="dark"></div><table class="contrast" data-for="dark"></table></div>
+  </div>
+</div>
+
+<script>
+const TODAY = 24;
+const I = {
+  check: '<path d="M20 6 9 17l-5-5"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  x: '<path d="M18 6 6 18M6 6l12 12"/>',
+  left: '<path d="m15 18-6-6 6-6"/>',
+  right: '<path d="m9 18 6-6-6-6"/>',
+  down: '<path d="m6 9 6 6 6-6"/>',
+  target: '<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>',
+  alert: '<circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/>',
+  cal: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
+  home: '<rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/>',
+  list: '<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>',
+  receipt: '<path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8M12 17.5v-11"/>',
+  piggy: '<path d="M19 5c-1.5 0-2.8 1.4-3 2-3.5-1.5-11-.3-11 5 0 1.8 0 3 2 4.5V20h4v-2h3v2h4v-4c1-.5 1.7-1 2-2h2v-4h-2c0-1-.5-1.5-1-2V5z"/><path d="M2 9v1c0 1.1.9 2 2 2h1"/>',
+  users: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',
+};
+const svg = (n, cls = '') => `<svg viewBox="0 0 24 24" class="${cls}" aria-hidden="true">${I[n]}</svg>`;
+const money = (n) => 'S/ ' + n.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const CATS = [['Comida','amber'],['Pasajes','blue'],['Taxi','sky'],['Casa','stone'],['Salidas / Ocio','purple'],['Salud','green'],['Ropa','rose'],['Otros','gray']];
+const hue = (c) => (CATS.find((x) => x[0] === c) || [0, 'gray'])[1];
+
+const state = {
+  screen: 'fijos',
+  fijosVariant: 'B',
+  regVariant: 'B',
+  expenses: [
+    { id: 1, name: 'iPhone + Apple Watch (cuota 8 de 12)', amount: 230, day: 5, paid: true, paidOn: 5 },
+    { id: 2, name: 'Celular mamá', amount: 30, day: 10, paid: true, paidOn: 9 },
+    { id: 3, name: 'Celular papá', amount: 30, day: 10, paid: false },
+    { id: 4, name: 'Spotify + Apple One', amount: 15, day: 12, paid: true, paidOn: 12 },
+    { id: 5, name: 'Cuota del departamento', amount: 500, day: 25, paid: false },
+    { id: 6, name: 'Cuota del terreno en Ica', amount: 481, day: 28, paid: false },
+    { id: 7, name: 'Seguro del departamento', amount: 180, day: 3, paid: true, paidOn: 2 },
+    { id: 8, name: 'Internet SMP', amount: 100, day: 24, paid: false },
+    { id: 9, name: 'Gasolina', amount: 200, tracked: true, used: 120 },
+  ],
+  sheet: null,          // { kind: 'edit'|'carga'|'registro', id }
+  sheetFresh: false,    // la hoja acaba de abrirse: anima la entrada una sola vez
+  draft: {},
+  justToggled: null,    // { id, x, y }
+  toast: null,
+  txs: [
+    { id: 't1', amount: 35, cat: 'Comida', desc: 'Almuerzo', when: 'hoy' },
+    { id: 't2', amount: 18, cat: 'Taxi', desc: 'Uber al trabajo', when: 'ayer' },
+    { id: 't3', amount: 85, cat: 'Salidas / Ocio', desc: 'Cena con amigos', when: 'mié 21 oct' },
+  ],
+  freshTx: null,
+  reg: null,
+};
+let nextId = 100;
+function freshReg() {
+  return { amount: '', cat: null, date: 'hoy', method: null, desc: '', shared: false, myShare: '', paidBack: '', details: false };
+}
+
+// ── Gastos fijos ───────────────────────────────────────────
+function dueMeta(e) {
+  if (e.paid) return `<div class="meta paid">${svg('check')} Pagado el ${e.paidOn} oct</div>`;
+  if (!e.day) return `<div class="meta">Sin día de pago</div>`;
+  if (e.day < TODAY) return `<div class="meta"><span class="pill late" data-c="Venció (rojo)">${svg('alert')} Venció el ${e.day}</span></div>`;
+  if (e.day === TODAY) return `<div class="meta"><span class="pill due" data-c="Vence hoy (ámbar)">Vence hoy</span></div>`;
+  if (e.day === TODAY + 1) return `<div class="meta"><span class="pill due">Vence mañana</span></div>`;
+  return `<div class="meta" data-c="Texto secundario">Vence el ${e.day}</div>`;
+}
+function expenseRow(e) {
+  if (e.tracked) {
+    const pct = Math.min(e.used / e.amount, 1) * 100;
+    return `<div class="row" data-action="edit" data-id="${e.id}">
+      <div class="track-ic"><span>${svg('target')}</span></div>
+      <div class="grow"><div class="name">${e.name}</div>
+        <div class="meta">${money(e.used)} de ${money(e.amount)} usados</div>
+        <div class="mini-bar"><i style="width:${pct}%"></i></div></div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end">
+        <div class="amount">${money(e.amount - e.used)}</div>
+        <div class="meta" style="margin-top:0">libres</div>
+        <button class="add-entry" data-action="carga" data-id="${e.id}">+ Carga</button>
+      </div></div>`;
+  }
+  const t = state.justToggled && state.justToggled.id === e.id ? state.justToggled : null;
+  const style = t ? `style="--x:${t.x}%;--y:${t.y}%"` : '';
+  return `<div class="row ${e.paid ? 'is-paid' : ''}" data-action="edit" data-id="${e.id}">
+    <button class="check ${e.paid ? 'on' : ''} ${t ? 'animate' : ''}" ${style} data-action="toggle" data-id="${e.id}"
+      role="checkbox" aria-checked="${e.paid}" aria-label="Marcar ${e.name} como pagado"><span class="ring">${svg('check')}</span></button>
+    <div class="grow"><div class="name" data-c="Texto principal">${e.name}</div>${dueMeta(e)}</div>
+    <div class="amount">${money(e.amount)}</div></div>`;
+}
+function fijosScreen() {
+  const bills = state.expenses.filter((e) => !e.tracked);
+  const total = bills.reduce((s, e) => s + e.amount, 0);
+  const paid = bills.filter((e) => e.paid).reduce((s, e) => s + e.amount, 0);
+  const count = bills.filter((e) => e.paid).length;
+  const sortKey = (e) => (e.day ?? 99);
+  let list;
+  if (state.fijosVariant === 'A') {
+    list = `<div class="card list">${[...state.expenses].sort((a, b) => (a.tracked ? 100 : sortKey(a)) - (b.tracked ? 100 : sortKey(b))).map(expenseRow).join('')}</div>`;
+  } else {
+    const pending = bills.filter((e) => !e.paid).sort((a, b) => sortKey(a) - sortKey(b));
+    const done = bills.filter((e) => e.paid).sort((a, b) => sortKey(a) - sortKey(b));
+    const tracked = state.expenses.filter((e) => e.tracked);
+    list = `
+      <div class="section-title"><span>Por pagar</span><span>${pending.length}</span></div>
+      <div class="card list">${pending.length ? pending.map(expenseRow).join('') : '<div class="row" style="cursor:default"><div class="grow meta" style="padding-left:12px">Todo pagado este mes 🎉</div></div>'}</div>
+      <div class="section-title"><span>Presupuestos</span></div>
+      <div class="card list">${tracked.map(expenseRow).join('')}</div>
+      <div class="section-title"><span>Pagados</span><span>${done.length}</span></div>
+      <div class="card list">${done.map(expenseRow).join('')}</div>`;
+  }
+  return `
+    <div class="topbar"><h2 data-c="Título">Gastos fijos</h2>
+      <div class="month"><button class="icon-btn" aria-label="Mes anterior">${svg('left')}</button>Octubre<button class="icon-btn" aria-label="Mes siguiente">${svg('right')}</button></div></div>
+    <div class="card summary">
+      <div class="label" data-c="Tarjeta: etiqueta">Por pagar este mes</div>
+      <div class="big">${money(total - paid)}</div>
+      <div class="bar"><i style="transform:scaleX(${total ? paid / total : 0})"></i></div>
+      <div class="foot"><span>Pagado ${money(paid)}</span><span>${count} de ${bills.length} pagos</span></div>
+    </div>
+    <div class="autosave">${svg('check')} Los cambios se guardan solos</div>
+    ${list}
+    <button class="add-row" data-action="add-fixed">${svg('plus')} Agregar gasto fijo</button>`;
+}
+function editSheet() {
+  const d = state.draft;
+  if (state.sheet.kind === 'carga') {
+    return `<div class="sheet-head"><h3>Carga de ${d.name}</h3><button class="icon-btn" data-action="close" aria-label="Cerrar">${svg('x')}</button></div>
+      <div class="amount-box"><b>S/</b><input class="amount-input" inputmode="decimal" placeholder="0" data-model="draft.carga" value="${d.carga ?? ''}"></div>
+      <div class="field"><span>Nota (opcional)</span><input class="input" placeholder="Grifo, lugar…" data-model="draft.note" value="${d.note ?? ''}"></div>
+      <div class="owed" data-bind="cargaHint"></div>
+      <div class="actions"><button class="btn primary" data-action="save-carga" data-bind="cargaBtn">Registrar carga</button></div>`;
+  }
+  const isNew = !d.id;
+  return `<div class="sheet-head"><h3>${isNew ? 'Nuevo gasto fijo' : 'Editar gasto fijo'}</h3><button class="icon-btn" data-action="close" aria-label="Cerrar">${svg('x')}</button></div>
+    <label class="field"><span>Nombre</span><input class="input" data-model="draft.name" value="${d.name ?? ''}" placeholder="Ej. Internet"></label>
+    <div class="grid2">
+      <label class="field"><span>Monto (S/)</span><input class="input" inputmode="decimal" data-model="draft.amount" value="${d.amount ?? ''}"></label>
+      <label class="field"><span>Día de pago</span><input class="input" inputmode="numeric" data-model="draft.day" value="${d.day ?? ''}" placeholder="1 a 31"></label>
+    </div>
+    <div class="toggle-row" data-action="toggle-tracked">
+      <div class="grow"><b style="font-size:14.5px">Lo gasto de a pocos</b><span>Para presupuestos como gasolina: registras cargas y ves cuánto te queda.</span></div>
+      <button class="switch" role="switch" aria-checked="${!!d.tracked}" aria-label="Lo gasto de a pocos"></button>
+    </div>
+    <div class="actions">
+      ${isNew ? '' : `<button class="btn danger" data-action="delete">Eliminar</button>`}
+      <button class="btn primary" data-action="save-edit">Guardar</button>
+    </div>`;
+}
+
+// ── Registro rápido ────────────────────────────────────────
+function registroScreen() {
+  return `
+    <div class="topbar"><h2>Gastos variables</h2><div class="month">Octubre</div></div>
+    <div class="section-title"><span>Últimos gastos</span></div>
+    <div class="card">${state.txs.map((t) => `
+      <div class="tx c-${hue(t.cat)} ${state.freshTx === t.id ? 'fresh' : ''}"><span class="dot"></span>
+        <div class="grow"><div class="name" style="font-size:14.5px">${t.desc || t.cat}</div><div class="meta">${t.cat} · ${t.when}</div></div>
+        <div class="amount">${money(t.amount)}</div></div>`).join('')}</div>
+    <p class="meta" style="margin:16px 4px;justify-content:center">Toca + para registrar un gasto</p>`;
+}
+function owedText(r) {
+  const amount = Number(r.amount) || 0;
+  const mine = r.myShare === '' ? 0 : Math.min(Number(r.myShare) || 0, amount);
+  const owed = Math.max(amount - mine - (Number(r.paidBack) || 0), 0);
+  return owed > 0 ? `Te deben <b>${money(owed)}</b>${r.myShare === '' ? ' · sin tu parte, se asume que te deben todo' : ''}` : 'No te deben nada';
+}
+function regDetails(r) {
+  return `
+    <div class="label-sm">Fecha</div>
+    <div class="chips">${['hoy', 'ayer', 'otra'].map((d) => `<button class="chip" data-action="reg-date" data-v="${d}" aria-pressed="${r.date === d}">${r.date === d ? svg('check') : ''}${d === 'otra' ? 'Otra fecha' : d[0].toUpperCase() + d.slice(1)}</button>`).join('')}</div>
+    <div class="label-sm">Método de pago</div>
+    <div class="chips">${['Efectivo', 'Yape', 'Tarjeta'].map((m) => `<button class="chip" data-action="reg-method" data-v="${m}" aria-pressed="${r.method === m}">${r.method === m ? svg('check') : ''}${m}</button>`).join('')}</div>
+    <label class="field"><span>Descripción (opcional)</span><input class="input" data-model="reg.desc" value="${r.desc}" placeholder="¿En qué fue?"></label>
+    <div class="toggle-row" data-action="reg-shared">
+      <div class="grow"><b style="font-size:14.5px">Gasto compartido</b><span>Pagaste tú y otros te devuelven una parte.</span></div>
+      <button class="switch" role="switch" aria-checked="${r.shared}" aria-label="Gasto compartido"></button>
+    </div>
+    ${r.shared ? `<div class="grid2">
+      <label class="field"><span>Mi parte</span><input class="input" inputmode="decimal" data-model="reg.myShare" value="${r.myShare}" placeholder="0.00"></label>
+      <label class="field"><span>Ya me pagaron</span><input class="input" inputmode="decimal" data-model="reg.paidBack" value="${r.paidBack}" placeholder="0.00"></label>
+    </div><div class="owed" data-bind="owed">${owedText(r)}</div>` : ''}`;
+}
+function registroSheet() {
+  const r = state.reg;
+  const summary = [r.date === 'hoy' ? 'Hoy' : r.date === 'ayer' ? 'Ayer' : 'Otra fecha', r.method || 'Sin método', r.desc ? '“' + r.desc + '”' : null, r.shared ? 'Compartido' : null].filter(Boolean).join(' · ');
+  return `
+    <div class="grabber"></div>
+    <div class="amount-box"><b>S/</b><input class="amount-input" inputmode="decimal" placeholder="0" aria-label="Monto" data-model="reg.amount" value="${r.amount}"></div>
+    <div class="label-sm">Categoría</div>
+    <div class="chips">${CATS.map(([c, h]) => `<button class="chip cat c-${h}" data-action="reg-cat" data-v="${c}" aria-pressed="${r.cat === c}" ${c === 'Comida' ? 'data-c="Chip de categoría"' : ''}>${r.cat === c ? svg('check') : ''}${c}</button>`).join('')}</div>
+    ${state.regVariant === 'A' ? regDetails(r) : `
+      <button class="details-row ${r.details ? 'open' : ''}" data-action="reg-details">${svg('cal')}<span class="grow">${summary}</span>${svg('down', 'chev')}</button>
+      ${r.details ? regDetails(r) : ''}`}
+    <div class="actions"><button class="btn primary" data-action="reg-save" data-bind="regBtn" data-c="Botón principal"></button></div>`;
+}
+
+// ── Render ─────────────────────────────────────────────────
+const phones = [...document.querySelectorAll('.phone')];
+function navBar() {
+  const fijos = state.screen === 'fijos';
+  const open = state.sheet && state.sheet.kind === 'registro';
+  return `<nav class="nav">
+    <a>${svg('home')}Resumen</a><a class="${fijos ? 'active' : ''}">${svg('list')}Fijos</a>
+    <div class="fab-wrap"><button class="fab ${open ? 'open' : ''}" data-action="fab" aria-label="${open ? 'Cerrar registro' : 'Registrar gasto'}">${svg('plus')}</button></div>
+    <a class="${fijos ? '' : 'active'}">${svg('receipt')}Variables</a><a>${svg('piggy')}Ahorros</a></nav>`;
+}
+function render() {
+  const enter = state.sheetFresh ? 'enter' : '';
+  phones.forEach((p) => {
+    const scrollTop = p.querySelector('.scroll')?.scrollTop ?? 0;
+    const sheet = state.sheet
+      ? `<div class="scrim ${enter}" data-action="close"></div>
+         <div class="sheet ${enter} ${state.sheet.kind === 'registro' ? '' : 'over-nav'}" role="dialog">${state.sheet.kind === 'registro' ? registroSheet() : editSheet()}</div>`
+      : '';
+    p.innerHTML = `<div class="status"><span>9:41</span><span>●●● 5G</span></div>
+      <div class="scroll">${state.screen === 'fijos' ? fijosScreen() : registroScreen()}</div>
+      ${navBar()}${sheet}
+      ${state.toast ? `<div class="toast" role="status"><span class="grow">${state.toast.text}</span>${state.toast.undo ? '<button data-action="undo">Deshacer</button>' : ''}</div>` : ''}`;
+    p.querySelector('.scroll').scrollTop = scrollTop;
+  });
+  state.sheetFresh = false;
+  state.justToggled = null;
+  state.freshTx = null;
+  patch();
+  renderControls();
+  requestAnimationFrame(renderContrast);
+}
+// Actualiza solo los textos que dependen de lo que se escribe, sin re-render (que robaría el foco).
+function patch() {
+  phones.forEach((p) => {
+    p.querySelectorAll('[data-bind]').forEach((el) => {
+      const b = el.dataset.bind;
+      if (b === 'regBtn') {
+        const n = Number(state.reg.amount) || 0;
+        el.textContent = n > 0 ? `Guardar ${money(n)}${state.reg.cat ? '' : ' · elige categoría'}` : 'Escribe el monto';
+        el.disabled = !(n > 0 && state.reg.cat);
+      }
+      if (b === 'owed') el.innerHTML = owedText(state.reg);
+      if (b === 'cargaBtn') { const n = Number(state.draft.carga) || 0; el.textContent = n > 0 ? `Registrar ${money(n)}` : 'Registrar carga'; el.disabled = !(n > 0); }
+      if (b === 'cargaHint') { const e = state.expenses.find((x) => x.id === state.draft.id); const left = e.amount - e.used - (Number(state.draft.carga) || 0); el.innerHTML = left >= 0 ? `Te quedarán <b style="color:var(--track)">${money(left)}</b> de ${money(e.amount)}` : `<b style="color:var(--late)">Te pasarás por ${money(-left)}</b>`; }
+    });
+  });
+}
+function renderControls() {
+  document.querySelectorAll('[data-screen]').forEach((b) => b.setAttribute('aria-pressed', b.dataset.screen === state.screen));
+  const fijos = state.screen === 'fijos';
+  const opts = fijos
+    ? [['A', 'Una sola lista por fecha', 'Todos los gastos ordenados por día de pago; los pagados quedan en gris (sin tachar).'],
+       ['B', 'Por pagar · Presupuestos · Pagados', 'Arriba solo lo que falta pagar, ordenado por fecha. Lo pagado baja a su propia sección.']]
+    : [['A', 'Todo a la vista', 'Monto, categoría, fecha, método, nota y compartido en una sola hoja.'],
+       ['B', 'Lo justo + detalles', 'Solo monto y categoría; fecha (Hoy por defecto), método, nota y compartido quedan plegados en una fila.']];
+  const cur = fijos ? state.fijosVariant : state.regVariant;
+  document.getElementById('variants').innerHTML = opts.map(([k, t, d]) =>
+    `<button class="variant" data-variant="${k}" aria-pressed="${cur === k}"><strong>Opción ${k}: ${t} ${k === 'B' ? '<span class="badge">Recomendada</span>' : ''}</strong><span>${d}</span></button>`).join('');
+  document.getElementById('why').innerHTML = fijos
+    ? '<b>Por qué recomiendo B:</b> cuando abres Gastos fijos la pregunta es «¿qué me falta pagar?». B la responde sin bajar: lo vencido y lo de hoy queda arriba. Además: nombres completos (hasta 2 líneas), el día de pago escrito («Vence el 25», «Venció el 10»), check grande de 44 px que se rellena desde donde tocas, editar en una hoja aparte y <b>sin botón Guardar</b>: marcar un pago se guarda solo.'
+    : '<b>Por qué recomiendo B:</b> el 90 % de los gastos son «monto + categoría, hoy». Con B eso es escribir el monto y un toque; nada más a la vista. Si necesitas fecha, método o compartido, la fila resumen («Hoy · Sin método») los abre. El botón dice el monto («Guardar S/ 35.00») para confirmar sin leer de nuevo, y al guardar aparece «Deshacer».';
+}
+
+// ── Contraste WCAG en vivo ─────────────────────────────────
+function parse(c) { const m = c.match(/[\d.]+/g).map(Number); return { r: m[0], g: m[1], b: m[2], a: m[3] ?? 1 }; }
+function over(top, under) { const a = top.a; return { r: top.r * a + under.r * (1 - a), g: top.g * a + under.g * (1 - a), b: top.b * a + under.b * (1 - a), a: 1 }; }
+function bgOf(el) {
+  const layers = [];
+  for (let n = el; n && n.nodeType === 1; n = n.parentElement) { const c = parse(getComputedStyle(n).backgroundColor); if (c.a > 0) { layers.push(c); if (c.a === 1) break; } }
+  return layers.reverse().reduce((acc, c) => over(c, acc), { r: 255, g: 255, b: 255, a: 1 });
+}
+function lum({ r, g, b }) { const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }; return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b); }
+function ratio(a, b) { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05); }
+const hex = ({ r, g, b }) => '#' + [r, g, b].map((v) => Math.round(v).toString(16).padStart(2, '0')).join('');
+function renderContrast() {
+  phones.forEach((p) => {
+    const rows = [];
+    const seen = new Set();
+    p.querySelectorAll('[data-c]').forEach((el) => {
+      const name = el.dataset.c; if (seen.has(name)) return; seen.add(name);
+      const bg = bgOf(el); const fg = over(parse(getComputedStyle(el).color), bg);
+      const r = ratio(fg, bg); const need = 4.5;
+      rows.push(`<tr><td>${name}</td><td><span class="swatch" style="background:${hex(fg)}"></span><span class="swatch" style="background:${hex(bg)}"></span></td><td class="${r >= need ? 'ok' : 'bad'}">${r.toFixed(1)}:1 ${r >= need ? '✓' : '✗'}</td></tr>`);
+    });
+    document.querySelector(`table[data-for="${p.dataset.theme}"]`).innerHTML = `<tr><th>Elemento</th><th>Colores</th><th>Contraste (mín. 4.5)</th></tr>${rows.join('')}`;
+  });
+}
+
+// ── Eventos ────────────────────────────────────────────────
+let toastTimer;
+function toast(text, undo) {
+  state.toast = { text, undo: !!undo }; state.undo = undo || null;
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => { state.toast = null; state.undo = null; render(); }, 5000);
+}
+function openSheet(kind, draft = {}) { state.sheet = { kind }; state.draft = draft; state.sheetFresh = true; }
+function closeSheet() { state.sheet = null; }
+
+document.addEventListener('pointerdown', (e) => {
+  const c = e.target.closest('.check');
+  if (!c) return;
+  const r = c.querySelector('.ring').getBoundingClientRect();
+  c.dataset.x = Math.round(((e.clientX - r.left) / r.width) * 100);
+  c.dataset.y = Math.round(((e.clientY - r.top) / r.height) * 100);
+});
+document.addEventListener('click', (e) => {
+  const scr = e.target.closest('[data-screen]');
+  if (scr) { state.screen = scr.dataset.screen; closeSheet(); state.toast = null; if (state.screen === 'registro') { state.reg = freshReg(); openSheet('registro'); } render(); return; }
+  const v = e.target.closest('[data-variant]');
+  if (v) { if (state.screen === 'fijos') state.fijosVariant = v.dataset.variant; else state.regVariant = v.dataset.variant; render(); return; }
+  const el = e.target.closest('[data-action]');
+  if (!el || !el.closest('.phone')) return;
+  const a = el.dataset.action; const id = Number(el.dataset.id);
+  const ex = state.expenses.find((x) => x.id === id);
+  if (a === 'toggle') {
+    e.stopPropagation();
+    ex.paid = !ex.paid; ex.paidOn = TODAY;
+    state.justToggled = ex.paid ? { id, x: el.dataset.x ?? 50, y: el.dataset.y ?? 50 } : null;
+    toast(ex.paid ? `${ex.name} marcado como pagado` : `${ex.name} vuelve a pendiente`, () => { ex.paid = !ex.paid; });
+  }
+  else if (a === 'carga') { e.stopPropagation(); openSheet('carga', { id, name: ex.name }); }
+  else if (a === 'edit') openSheet('edit', { ...ex });
+  else if (a === 'add-fixed') openSheet('edit', { tracked: false });
+  else if (a === 'close') closeSheet();
+  else if (a === 'toggle-tracked') state.draft.tracked = !state.draft.tracked;
+  else if (a === 'save-edit') {
+    const d = state.draft; const data = { name: d.name || 'Sin nombre', amount: Number(d.amount) || 0, day: Number(d.day) || null, tracked: !!d.tracked };
+    if (d.id) { const target = state.expenses.find((x) => x.id === d.id); Object.assign(target, data); target.used ??= 0; }
+    else state.expenses.push({ id: nextId++, paid: false, used: 0, ...data });
+    closeSheet(); toast('Gasto fijo guardado');
+  }
+  else if (a === 'delete') {
+    const idx = state.expenses.findIndex((x) => x.id === state.draft.id); const removed = state.expenses.splice(idx, 1)[0];
+    closeSheet(); toast(`«${removed.name}» eliminado`, () => state.expenses.splice(idx, 0, removed));
+  }
+  else if (a === 'save-carga') {
+    const t = state.expenses.find((x) => x.id === state.draft.id); const n = Number(state.draft.carga) || 0; t.used += n;
+    closeSheet(); toast(`Carga de ${money(n)} registrada`, () => { t.used -= n; });
+  }
+  else if (a === 'fab') { if (state.sheet?.kind === 'registro') closeSheet(); else { state.screen = 'registro'; state.reg = freshReg(); openSheet('registro'); } }
+  else if (a === 'reg-cat') state.reg.cat = el.dataset.v;
+  else if (a === 'reg-date') state.reg.date = el.dataset.v;
+  else if (a === 'reg-method') state.reg.method = state.reg.method === el.dataset.v ? null : el.dataset.v;
+  else if (a === 'reg-shared') state.reg.shared = !state.reg.shared;
+  else if (a === 'reg-details') state.reg.details = !state.reg.details;
+  else if (a === 'reg-save') {
+    const r = state.reg; const tx = { id: 'n' + nextId++, amount: Number(r.amount), cat: r.cat, desc: r.desc, when: r.date === 'hoy' ? 'hoy' : r.date === 'ayer' ? 'ayer' : 'otra fecha' };
+    state.txs.unshift(tx); state.freshTx = tx.id; closeSheet();
+    toast(`Gasto de ${money(tx.amount)} guardado`, () => { state.txs = state.txs.filter((x) => x.id !== tx.id); });
+  }
+  else if (a === 'undo') { state.undo && state.undo(); state.toast = null; state.undo = null; clearTimeout(toastTimer); }
+  else return;
+  render();
+});
+document.addEventListener('input', (e) => {
+  const m = e.target.dataset.model; if (!m) return;
+  const [obj, key] = m.split('.'); state[obj][key] = e.target.value;
+  phones.forEach((p) => { const other = p.querySelector(`[data-model="${m}"]`); if (other && other !== e.target) other.value = e.target.value; });
+  patch();
+});
+
+render();
+</script>
+</body>
+</html>

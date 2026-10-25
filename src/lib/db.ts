@@ -310,13 +310,16 @@ export async function getFixedExpenseEntryTotals(userId: string, fixedExpenseIds
   return totals;
 }
 
+// Devuelve el id de la carga (se genera aquí) para poder deshacerla.
 export async function addFixedExpenseEntry(data: Omit<FixedExpenseEntry, 'id' | 'createdAt'>) {
+  const id = crypto.randomUUID();
   if (DEMO_MODE) {
-    demoStore.fixedExpenseEntries.unshift({ ...data, id: crypto.randomUUID(), createdAt: new Date().toISOString() });
-    return;
+    demoStore.fixedExpenseEntries.unshift({ ...data, id, createdAt: new Date().toISOString() });
+    return id;
   }
   check(
     await sb().from('fixed_expense_entries').insert({
+      id,
       fixed_expense_id: data.fixedExpenseId,
       user_id: data.userId,
       date: data.date,
@@ -325,6 +328,7 @@ export async function addFixedExpenseEntry(data: Omit<FixedExpenseEntry, 'id' | 
     }),
     'guardar la carga'
   );
+  return id;
 }
 
 export async function deleteFixedExpenseEntry(id: string) {
@@ -374,13 +378,16 @@ export async function getTransactions(userId: string, monthId: string): Promise<
   return ((data ?? []) as TransactionRow[]).map(mapTransactionRow);
 }
 
+// Devuelve el id del gasto (se genera aquí) para poder deshacerlo.
 export async function addTransaction(data: Omit<Transaction, 'id' | 'createdAt'>) {
+  const id = crypto.randomUUID();
   if (DEMO_MODE) {
-    demoStore.transactions.unshift({ ...data, id: crypto.randomUUID(), createdAt: new Date().toISOString() });
-    return;
+    demoStore.transactions.unshift({ ...data, id, createdAt: new Date().toISOString() });
+    return id;
   }
   check(
     await sb().from('transactions').insert({
+      id,
       user_id: data.userId,
       month_id: data.monthId,
       date: data.date,
@@ -394,6 +401,7 @@ export async function addTransaction(data: Omit<Transaction, 'id' | 'createdAt'>
     }),
     'guardar el gasto'
   );
+  return id;
 }
 
 export async function updateTransaction(id: string, data: Partial<Omit<Transaction, 'id' | 'userId' | 'createdAt'>>) {

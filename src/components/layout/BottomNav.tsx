@@ -1,7 +1,9 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { onQuickAddState, requestQuickAddClose, requestQuickAddOpen } from '@/lib/quickAdd';
 import { LayoutDashboard, Receipt, List, PiggyBank, Plus } from 'lucide-react';
 
 const leftNav = [
@@ -32,18 +34,36 @@ function NavLink({ href, label, icon: Icon, active }: { href: string; label: str
 
 export function BottomNav() {
   const pathname = usePathname();
+  const router = useRouter();
+  const [quickOpen, setQuickOpen] = useState(false);
+
+  useEffect(() => onQuickAddState(setQuickOpen), []);
+
+  // Abre el registro rápido; si ya está abierto, el mismo botón (ahora ×) lo cierra.
+  function handleQuickAdd() {
+    if (quickOpen) requestQuickAddClose();
+    else if (pathname.startsWith('/gastos-variables')) requestQuickAddOpen();
+    else router.push('/gastos-variables?quick=1');
+  }
+
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-stone-900 border-t border-stone-100 dark:border-stone-800 flex items-center md:hidden z-50 shadow-[0_-4px_16px_rgba(41,37,36,0.04)]">
+    <nav className="fixed bottom-0 left-0 right-0 h-[var(--bottom-nav-h)] bg-white dark:bg-stone-900 border-t border-stone-100 dark:border-stone-800 flex items-center md:hidden z-50 shadow-[0_-4px_16px_rgba(41,37,36,0.04)]">
       {leftNav.map((item) => (
         <NavLink key={item.href} {...item} active={pathname.startsWith(item.href)} />
       ))}
       <div className="flex-1 flex justify-center">
-        <Link
-          href="/gastos-variables?quick=1"
+        <button
+          type="button"
+          onClick={handleQuickAdd}
+          aria-label={quickOpen ? 'Cerrar registro de gasto' : 'Registrar gasto'}
           className="-translate-y-4 bg-slate-800 text-white rounded-full p-3.5 shadow-lg shadow-slate-800/30 active:scale-95 transition-transform"
         >
-          <Plus size={22} strokeWidth={2.5} />
-        </Link>
+          <Plus
+            size={22}
+            strokeWidth={2.5}
+            className={`transition-transform duration-[380ms] [transition-timing-function:var(--spring)] ${quickOpen ? 'rotate-45' : ''}`}
+          />
+        </button>
       </div>
       {rightNav.map((item) => (
         <NavLink key={item.href} {...item} active={pathname.startsWith(item.href)} />

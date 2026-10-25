@@ -52,6 +52,13 @@ export function formatShortDate(iso: string) {
   return `${WEEKDAYS[date.getDay()]} ${day} ${MONTHS[month - 1]}`;
 }
 
+// "5 oct", sin día de la semana; si es de otro año, "5 oct 2025".
+export function formatDayMonth(iso: string) {
+  const [year, month, day] = iso.split('-').map(Number);
+  const label = `${day} ${MONTHS[month - 1]}`;
+  return year === new Date().getFullYear() ? label : `${label} ${year}`;
+}
+
 export function getPreviousMonthId(monthId: string) {
   const [year, month] = monthId.split('-').map(Number);
   const date = new Date(year, month - 2, 1);

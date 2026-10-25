@@ -4,12 +4,23 @@
   --background: #F7F6F3;
   --foreground: #1C1C1C;
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  /* Hojas tipo iOS. */
+  --ease-sheet: cubic-bezier(0.32, 0.72, 0, 1);
+  /* Soltar con resorte: solo en checks, interruptores y el giro del +. */
+  --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --bottom-nav-h: 4.5rem;
+  --paid: var(--color-emerald-700);
+  --paid-ink: #ffffff;
+  --fresh: var(--color-emerald-50);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0c0a09;
     --foreground: #f5f5f4;
+    --paid: var(--color-emerald-300);
+    --paid-ink: var(--color-emerald-950);
+    --fresh: color-mix(in oklab, var(--color-emerald-500) 16%, transparent);
   }
 }
 
@@ -40,7 +51,139 @@ body {
   transform-origin: top;
 }
 
+/* Hoja inferior: sube desde abajo en el teléfono; en escritorio aparece al centro. */
+@keyframes sheet-in {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+.motion-sheet {
+  animation: sheet-in 420ms var(--ease-sheet) both;
+}
+
+.motion-fade {
+  animation: fade-in 300ms ease-out both;
+}
+
+@media (min-width: 768px) {
+  .motion-sheet {
+    animation: motion-pop-in 240ms var(--ease-out) both;
+    transform-origin: center;
+  }
+}
+
+/* Fila recién guardada: un destello que se apaga. */
+@keyframes fresh-row {
+  from {
+    background-color: var(--fresh);
+  }
+}
+
+.motion-fresh {
+  animation: fresh-row 1.2s ease-out;
+}
+
+/* Check de pago: el relleno crece desde donde se tocó (--x, --y). */
+.pay-check {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  border-radius: 9999px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.pay-check .ring {
+  position: relative;
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 9999px;
+  border: 2px solid var(--color-stone-400);
+  color: var(--paid-ink);
+  transition: transform 180ms var(--ease-out);
+}
+
+.pay-check:active .ring {
+  transform: scale(0.88);
+}
+
+.pay-check .ring::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--paid);
+  clip-path: circle(0% at var(--x, 50%) var(--y, 50%));
+}
+
+.pay-check .ring svg {
+  position: relative;
+  z-index: 1;
+  opacity: 0;
+  transform: scale(0.4);
+}
+
+.pay-check[aria-checked='true'] .ring {
+  border-color: var(--paid);
+}
+
+.pay-check[aria-checked='true'] .ring::after {
+  clip-path: circle(150% at var(--x, 50%) var(--y, 50%));
+}
+
+.pay-check[aria-checked='true'] .ring svg {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.pay-check.animate .ring::after {
+  animation: fill-in 380ms var(--ease-out);
+}
+
+.pay-check.animate .ring svg {
+  animation: check-pop 380ms var(--spring) 80ms both;
+}
+
+@keyframes fill-in {
+  from {
+    clip-path: circle(0% at var(--x, 50%) var(--y, 50%));
+  }
+}
+
+@keyframes check-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  @keyframes sheet-in {
+    from {
+      opacity: 0;
+    }
+  }
+
+  @keyframes check-pop {
+    from {
+      opacity: 0;
+    }
+  }
+
+  .pay-check.animate .ring::after {
+    animation: none;
+  }
+
   @keyframes motion-pop-in {
     from {
       opacity: 0;

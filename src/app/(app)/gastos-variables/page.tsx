@@ -1,10 +1,12 @@
 'use client';
 
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useCallback, useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { getTransactions, addTransaction, updateTransaction, deleteTransaction, getCategories, addCategory, deleteCategory } from '@/lib/db';
-import { getCurrentMonthId, formatCurrency, insertAt, defaultDateForMonth, monthBounds, formatShortDate } from '@/lib/utils';
+import { getCurrentMonthId, formatCurrency, insertAt, defaultDateForMonth, formatShortDate } from '@/lib/utils';
+import { announceQuickAdd, onQuickAddClose, onQuickAddOpen } from '@/lib/quickAdd';
+import { ExpenseSheet, type ExpenseForm } from './ExpenseSheet';
 import { showUndo } from '@/components/ui/UndoToast';
 import { variableTotal, reimbursedTotal, costByCategory, owedToYou } from '@/lib/totals';
 import { categoryBadgeClass } from '@/lib/categoryColors';
@@ -13,10 +15,8 @@ import { Card, CardBody, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { reportError, LoadError } from '@/components/ui/ErrorToast';
-import { Select } from '@/components/ui/Select';
 import type { Transaction, PaymentMethod, Category } from '@/types';
-import { PAYMENT_METHODS } from '@/types';
-import { Plus, Trash2, X, Pencil, Users, CreditCard, Smartphone, Banknote, Settings2 } from 'lucide-react';
+import { Plus, X, Users, CreditCard, Smartphone, Banknote, Settings2 } from 'lucide-react';
 
 const PAYMENT_ICONS: Record<PaymentMethod, typeof CreditCard> = {
   tarjeta: CreditCard,
@@ -24,18 +24,35 @@ const PAYMENT_ICONS: Record<PaymentMethod, typeof CreditCard> = {
   efectivo: Banknote,
 };
 
-function emptyForm(defaultCategory: string, monthId: string) {
+// La categoría empieza vacía: elegirla es un toque y evita guardar en la equivocada.
+function emptyForm(monthId: string): ExpenseForm {
   return {
     date: defaultDateForMonth(monthId),
     amount: '',
-    category: defaultCategory,
+    category: '',
     description: '',
-    paymentMethod: '' as PaymentMethod | '',
+    paymentMethod: '',
     shared: false,
     myShare: '',
     reimbursedAmount: '',
   };
 }
+
+function formFor(t: Transaction): ExpenseForm {
+  return {
+    date: t.date,
+    amount: String(t.amount),
+    category: t.category,
+    description: t.description,
+    paymentMethod: t.paymentMethod ?? '',
+    shared: t.shared ?? false,
+    myShare: t.myShare != null ? String(t.myShare) : '',
+    reimbursedAmount: t.reimbursedAmount ? String(t.reimbursedAmount) : '',
+  };
+}
+
+// key cambia en cada apertura para que la hoja arranque con su formulario.
+type SheetState = { key: number; editing: Transaction | null } | null;
 
 export default function GastosVariablesPage() {
   return (
@@ -53,8 +70,8 @@ function GastosVariablesContent() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<unknown>(null);
-  const [showForm, setShowForm] = useState(() => searchParams.get('quick') === '1');
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [sheet, setSheet] = useState<SheetState>(() => (searchParams.get('quick') === '1' ? { key: Date.now(), editing: null } : null));
+  const [freshId, setFreshId] = useState<string | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [showCategoryManager, setShowCategoryManager] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
@@ -65,9 +82,19 @@ function GastosVariablesContent() {
     }
   }, [searchParams, router]);
 
-  // form
-  const [form, setForm] = useState(emptyForm('', getCurrentMonthId()));
   const [saving, setSaving] = useState(false);
+
+  const closeSheet = useCallback(() => setSheet(null), []);
+  const openNew = useCallback(() => setSheet({ key: Date.now(), editing: null }), []);
+
+  // El + de la barra muestra × mientras la hoja nueva está abierta, y la cierra.
+  const quickOpen = !!sheet && !sheet.editing;
+  useEffect(() => {
+    announceQuickAdd(quickOpen);
+  }, [quickOpen]);
+  useEffect(() => () => announceQuickAdd(false), []);
+  useEffect(() => onQuickAddClose(closeSheet), [closeSheet]);
+  useEffect(() => onQuickAddOpen(openNew), [openNew]);
 
   useEffect(() => {
     if (!user) return;
@@ -105,52 +132,43 @@ function GastosVariablesContent() {
     });
   }
 
-  function openNewForm() {
-    setEditingId(null);
-    setForm(emptyForm(categories[0]?.name ?? '', monthId));
-    setShowForm(true);
-  }
-
-  function openEditForm(t: Transaction) {
-    setEditingId(t.id);
-    setForm({
-      date: t.date,
-      amount: String(t.amount),
-      category: t.category,
-      description: t.description,
-      paymentMethod: t.paymentMethod ?? '',
-      shared: t.shared ?? false,
-      myShare: t.myShare != null ? String(t.myShare) : '',
-      reimbursedAmount: t.reimbursedAmount ? String(t.reimbursedAmount) : '',
-    });
-    setShowForm(true);
-  }
-
-  async function handleSubmit() {
-    if (!user || !form.amount) return;
+  async function handleSubmit(form: ExpenseForm) {
+    if (!user || !sheet) return;
+    const editing = sheet.editing;
     setSaving(true);
     const payload = {
       date: form.date,
       amount: Number(form.amount),
       category: form.category,
-      description: form.description,
-      paymentMethod: form.paymentMethod || undefined,
+      description: form.description.trim(),
+      paymentMethod: (form.paymentMethod || undefined) as PaymentMethod | undefined,
       shared: form.shared,
       reimbursedAmount: form.shared ? Number(form.reimbursedAmount || 0) : 0,
       myShare: form.shared && form.myShare !== '' ? Number(form.myShare) : null,
     };
 
     try {
-      if (editingId) {
-        await updateTransaction(editingId, payload);
+      let id: string;
+      if (editing) {
+        await updateTransaction(editing.id, payload);
+        id = editing.id;
       } else {
-        await addTransaction({ userId: user.id, monthId, ...payload });
+        id = await addTransaction({ userId: user.id, monthId, ...payload });
       }
-      setShowForm(false);
-      setEditingId(null);
+      setSheet(null);
+      setFreshId(id);
       setTransactions(await getTransactions(user.id, monthId));
+      if (!editing) {
+        showUndo({
+          message: `Gasto de ${formatCurrency(payload.amount)} guardado`,
+          onUndo: async () => {
+            await deleteTransaction(id);
+            setTransactions((prev) => prev.filter((t) => t.id !== id));
+          },
+        });
+      }
     } catch (err) {
-      // El formulario queda abierto con lo escrito, para reintentar sin perderlo.
+      // La hoja queda abierta con lo escrito, para reintentar sin perderlo.
       reportError(err);
     } finally {
       setSaving(false);
@@ -158,6 +176,7 @@ function GastosVariablesContent() {
   }
 
   function handleDelete(id: string) {
+    setSheet(null);
     const index = transactions.findIndex((t) => t.id === id);
     const removed = transactions[index];
     if (!removed) return;
@@ -168,14 +187,6 @@ function GastosVariablesContent() {
       onCommit: () => deleteTransaction(id),
     });
   }
-
-  // Vista previa en el formulario, con la misma regla que la lista.
-  const formOwed = owedToYou({
-    amount: Number(form.amount || 0),
-    shared: true,
-    myShare: form.myShare !== '' ? Number(form.myShare) : null,
-    reimbursedAmount: Number(form.reimbursedAmount || 0),
-  });
 
   const total = variableTotal(transactions);
   const reimbursed = reimbursedTotal(transactions);
@@ -202,7 +213,13 @@ function GastosVariablesContent() {
           >
             <Settings2 size={16} />
           </button>
-          <MonthPicker monthId={monthId} onChange={setMonthId} />
+          <MonthPicker
+            monthId={monthId}
+            onChange={(m) => {
+              setSheet(null);
+              setMonthId(m);
+            }}
+          />
         </div>
       </div>
 
@@ -261,122 +278,9 @@ function GastosVariablesContent() {
         </div>
       )}
 
-      {/* Formulario nuevo / editar gasto */}
-      {showForm ? (
-        <Card className="motion-pop">
-          <CardHeader className="flex items-center justify-between">
-            <p className="text-sm font-semibold text-stone-700 dark:text-stone-200">{editingId ? 'Editar gasto' : 'Nuevo gasto'}</p>
-            <button
-              onClick={() => {
-                setShowForm(false);
-                setEditingId(null);
-              }}
-              aria-label="Cerrar formulario"
-              className="text-stone-500 dark:text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 p-2 -m-2"
-            >
-              <X size={16} />
-            </button>
-          </CardHeader>
-          <CardBody className="flex flex-col gap-3">
-            <div className="grid grid-cols-2 gap-3">
-              <Input
-                label="Fecha"
-                type="date"
-                {...monthBounds(monthId)}
-                value={form.date}
-                onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))}
-              />
-              <Input
-                label="Monto (S/)"
-                type="number"
-                value={form.amount}
-                onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))}
-                placeholder="0.00"
-                autoFocus
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <Select
-                label="Categoría"
-                value={form.category}
-                onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
-                options={categories.map((c) => ({ value: c.name, label: c.name }))}
-              />
-              <Select
-                label="Método de pago"
-                value={form.paymentMethod}
-                onChange={(e) => setForm((f) => ({ ...f, paymentMethod: e.target.value as PaymentMethod }))}
-                options={[{ value: '', label: 'Sin especificar' }, ...PAYMENT_METHODS]}
-              />
-            </div>
-            <Input
-              label="Descripción"
-              value={form.description}
-              onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-              placeholder="¿En qué fue?"
-              onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
-            />
-
-            <label className="flex items-center gap-2 text-sm text-stone-600 dark:text-stone-300 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={form.shared}
-                onChange={(e) => setForm((f) => ({ ...f, shared: e.target.checked }))}
-                className="rounded border-stone-300 dark:border-stone-600"
-              />
-              Gasto compartido (me deben una parte)
-            </label>
-
-            {form.shared && (
-              <div className="flex flex-col gap-1.5">
-                <div className="grid grid-cols-2 gap-3">
-                  <Input
-                    label="Mi parte"
-                    type="number"
-                    inputMode="decimal"
-                    value={form.myShare}
-                    onChange={(e) => setForm((f) => ({ ...f, myShare: e.target.value }))}
-                    placeholder="0.00"
-                  />
-                  <Input
-                    label="Ya me pagaron"
-                    type="number"
-                    inputMode="decimal"
-                    value={form.reimbursedAmount}
-                    onChange={(e) => setForm((f) => ({ ...f, reimbursedAmount: e.target.value }))}
-                    placeholder="0.00"
-                  />
-                </div>
-                {form.amount && (
-                  <p className="text-xs text-stone-500 dark:text-stone-400">
-                    {formOwed > 0 ? `Te deben ${formatCurrency(formOwed)}` : 'No te deben nada'}
-                    {form.myShare === '' && ' · sin tu parte, se asume que te deben todo'}
-                  </p>
-                )}
-              </div>
-            )}
-
-            <div className="flex justify-end gap-2">
-              <Button
-                variant="secondary"
-                onClick={() => {
-                  setShowForm(false);
-                  setEditingId(null);
-                }}
-              >
-                Cancelar
-              </Button>
-              <Button onClick={handleSubmit} disabled={saving || !form.amount}>
-                {saving ? 'Guardando...' : editingId ? 'Guardar cambios' : 'Agregar'}
-              </Button>
-            </div>
-          </CardBody>
-        </Card>
-      ) : (
-        <Button onClick={openNewForm} className="self-start">
-          <Plus size={15} className="mr-1.5" /> Registrar gasto
-        </Button>
-      )}
+      <Button onClick={openNew} className="self-start">
+        <Plus size={15} className="mr-1.5" /> Registrar gasto
+      </Button>
 
       {/* Lista de transacciones */}
       <Card>
@@ -400,14 +304,17 @@ function GastosVariablesContent() {
             const PaymentIcon = t.paymentMethod ? PAYMENT_ICONS[t.paymentMethod] : null;
             const pending = owedToYou(t);
             return (
-              <div
+              <button
+                type="button"
                 key={t.id}
-                className={`flex items-center gap-4 px-5 py-3 ${
-                  i < transactions.length - 1 ? 'border-b border-stone-50 dark:border-stone-800/60' : ''
-                }`}
+                onClick={() => setSheet({ key: Date.now(), editing: t })}
+                aria-label={`Editar gasto de ${formatCurrency(t.amount)} en ${t.category}`}
+                className={`flex w-full items-center gap-4 px-5 py-3 text-left active:bg-stone-50 dark:active:bg-stone-800/60 ${
+                  i < transactions.length - 1 ? 'border-b border-stone-100 dark:border-stone-800/60' : ''
+                } ${freshId === t.id ? 'motion-fresh' : ''}`}
               >
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                <span className="block flex-1 min-w-0">
+                  <span className="flex items-center gap-2 mb-0.5 flex-wrap">
                     <span
                       className={`text-xs px-2 py-0.5 rounded-full font-medium ${categoryBadgeClass(t.category)}`}
                     >
@@ -424,38 +331,38 @@ function GastosVariablesContent() {
                       </span>
                     )}
                     <span className="text-xs text-stone-500 dark:text-stone-400">{formatShortDate(t.date)}</span>
-                  </div>
+                  </span>
                   {t.description && (
-                    <p className="text-sm text-stone-600 dark:text-stone-300 truncate">{t.description}</p>
+                    <span className="block text-sm text-stone-600 dark:text-stone-300 truncate">{t.description}</span>
                   )}
                   {t.shared && (
-                    <p className={`text-xs mt-0.5 ${pending > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                    <span className={`block text-xs mt-0.5 ${pending > 0 ? 'text-amber-700 dark:text-amber-400' : 'text-emerald-700 dark:text-emerald-400'}`}>
                       {pending > 0 ? `Te deben ${formatCurrency(pending)}` : 'Ya te pagaron todo'}
-                    </p>
+                    </span>
                   )}
-                </div>
-                <p className="text-sm font-semibold text-stone-700 dark:text-stone-200 shrink-0">
+                </span>
+                <span className="text-sm font-semibold tabular-nums text-stone-700 dark:text-stone-200 shrink-0">
                   {formatCurrency(t.amount)}
-                </p>
-                <button
-                  onClick={() => openEditForm(t)}
-                  aria-label="Editar gasto"
-                  className="text-stone-400 dark:text-stone-600 hover:text-slate-500 dark:hover:text-slate-400 transition-colors shrink-0 p-2 -m-2"
-                >
-                  <Pencil size={14} />
-                </button>
-                <button
-                  onClick={() => handleDelete(t.id)}
-                  aria-label="Eliminar gasto"
-                  className="text-stone-400 dark:text-stone-600 hover:text-red-400 transition-colors shrink-0 p-2 -m-2"
-                >
-                  <Trash2 size={14} />
-                </button>
-              </div>
+                </span>
+              </button>
             );
           })}
         </CardBody>
       </Card>
+
+      {sheet && (
+        <ExpenseSheet
+          key={sheet.key}
+          initial={sheet.editing ? formFor(sheet.editing) : emptyForm(monthId)}
+          editing={!!sheet.editing}
+          categories={categories}
+          monthId={monthId}
+          saving={saving}
+          onClose={closeSheet}
+          onSubmit={handleSubmit}
+          onDelete={sheet.editing ? () => handleDelete(sheet.editing!.id) : undefined}
+        />
+      )}
     </div>
   );
 }

@@ -7,6 +7,7 @@ import { getMonth, saveMonth, getTransactions, getAccounts, saveAccount, addMove
 import { getCurrentMonthId, formatCurrency, monthIdToLabel, todayISO } from '@/lib/utils';
 import { notifyOncePerDay } from '@/lib/notifications';
 import { monthTotals } from '@/lib/totals';
+import { dueStatus } from '@/lib/due';
 import { MonthPicker } from '@/components/layout/MonthPicker';
 import { Card, CardBody, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -122,9 +123,8 @@ export default function DashboardPage() {
   } = monthTotals({ income, savings, fixedExpenses: monthData?.fixedExpenses ?? [] }, transactions);
   const pendingFixed = (monthData?.fixedExpenses ?? []).filter((f) => !f.paid);
   const isCurrentMonth = monthId === getCurrentMonthId();
-  const today = new Date().getDate();
-  const dueToday = isCurrentMonth ? pendingFixed.filter((f) => f.dueDay === today) : [];
-  const dueTomorrow = isCurrentMonth ? pendingFixed.filter((f) => f.dueDay === today + 1) : [];
+  const dueToday = pendingFixed.filter((f) => dueStatus(f, monthId).kind === 'today');
+  const dueTomorrow = pendingFixed.filter((f) => dueStatus(f, monthId).kind === 'tomorrow');
 
   useEffect(() => {
     if (!user || !isCurrentMonth) return;
