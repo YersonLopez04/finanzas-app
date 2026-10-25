@@ -31,8 +31,7 @@ Se ejecutan a mano en Supabase → SQL Editor. Claude no tiene acceso a la base.
 
 | Migración | Estado |
 |---|---|
-| 001–004 | Ejecutadas |
-| 005_transaction_my_share | **Pendiente.** Ejecutar ANTES de subir los commits que la usan, o guardar gastos variables falla |
+| 001–005 | Ejecutadas (005 `my_share`, el 2026-10-25) |
 
 Al agregar una columna: migración nueva + actualizar `schema.sql` + tipos + `db.ts` + respaldo CSV (export e import, aceptando backups viejos sin la columna).
 
@@ -66,7 +65,7 @@ Claude hace commits pero **no** sube ni despliega. El dueño corre el push; si h
 
 ## Pendientes (en orden)
 
-1. Ejecutar la migración 005 y subir los commits locales.
+1. Probar en producción con la cuenta real (Gastos fijos con autoguardado, registro rápido) y revisar saldos de ahorro inflados por el bug viejo del doble guardado.
 2. Cabeceras de seguridad en `next.config.ts` (CSP primero en Report-Only), sobre todo si la usan amigos.
 3. Tests de `totals.ts` dentro del repo.
 4. Diferido: recordatorios por correo de gastos fijos ("no es crítico").
