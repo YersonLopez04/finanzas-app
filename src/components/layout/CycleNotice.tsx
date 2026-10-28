@@ -33,9 +33,9 @@ export function CycleNotice() {
 
   return (
     <>
-      <div className="mx-auto mb-4 max-w-2xl rounded-2xl border border-sky-100 bg-sky-50 px-4 py-3.5 dark:border-sky-500/20 dark:bg-sky-500/10">
-        <p className="text-sm font-semibold text-sky-800 dark:text-sky-300">Empieza {name}</p>
-        <p className="mb-3 mt-0.5 text-sm text-sky-800 dark:text-sky-300">
+      <div className="mx-auto mb-4 max-w-2xl rounded-2xl border border-sky-100 bg-sky-50 px-4 py-3.5 dark:border-white/10 dark:bg-white/[0.07]">
+        <p className="text-sm font-semibold text-sky-900 dark:text-white">Empieza {name}</p>
+        <p className="mb-3 mt-0.5 text-sm text-sky-900 dark:text-stone-200">
           {arrived
             ? `Tu cobro previsto era el ${formatShortDate(pending.proposed)}. ¿Cobraste ese día?`
             : `Tu cobro está previsto para el ${formatShortDate(pending.proposed)}. ¿Ya cobraste?`}{' '}

@@ -159,7 +159,7 @@ function BudgetRow({
   return (
     <div className="flex items-center gap-1 pl-1.5 pr-2">
       <span className="grid h-11 w-11 shrink-0 place-items-center" aria-hidden="true">
-        <span className="grid h-[30px] w-[30px] place-items-center rounded-full bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300">
+        <span className="grid h-[30px] w-[30px] place-items-center rounded-full bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-100">
           <Target size={16} />
         </span>
       </span>
@@ -193,7 +193,7 @@ function BudgetRow({
         className="grid h-11 shrink-0 place-items-center pl-1"
         aria-label={`Registrar carga en ${expense.name || 'presupuesto'}`}
       >
-        <span className="rounded-full bg-sky-100 px-3 py-1.5 text-xs font-bold text-sky-800 dark:bg-sky-500/15 dark:text-sky-300">
+        <span className="rounded-full bg-sky-100 px-3 py-1.5 text-xs font-bold text-sky-800 dark:bg-sky-500/15 dark:text-sky-100">
           + Carga
         </span>
       </button>
@@ -208,7 +208,7 @@ function Section({ title, count, children }: { title: string; count?: number; ch
         <span>{title}</span>
         {count !== undefined && <span>{count}</span>}
       </h2>
-      <div className="divide-y divide-stone-100 rounded-2xl border border-stone-100 bg-white py-1 shadow-[0_2px_16px_rgba(41,37,36,0.06)] dark:divide-stone-800 dark:border-stone-800 dark:bg-stone-900 dark:shadow-none">
+      <div className="divide-y divide-stone-100 rounded-2xl border border-stone-100 bg-white py-1 shadow-[0_2px_16px_rgba(1,28,64,0.08)] dark:divide-stone-800 dark:border-stone-800 dark:bg-stone-900 dark:shadow-none">
         {children}
       </div>
     </section>
@@ -384,7 +384,7 @@ function EntrySheet({
         <p className="text-sm text-stone-500 dark:text-stone-400">
           {left >= 0 ? (
             <>
-              Te quedarán <b className="text-sky-700 dark:text-sky-300">{formatCurrency(left)}</b> de {formatCurrency(expense.amount || 0)}
+              Te quedarán <b className="text-sky-700 dark:text-white">{formatCurrency(left)}</b> de {formatCurrency(expense.amount || 0)}
             </>
           ) : (
             <b className="text-rose-700 dark:text-rose-300">Te pasarás por {formatCurrency(-left)}</b>
@@ -609,7 +609,7 @@ export default function GastosFijosPage() {
       {/* Copiar del mes anterior */}
       {expenses.length === 0 && previousExpenses.length > 0 && (
         <div className="flex items-center justify-between gap-3 bg-sky-50 dark:bg-sky-500/10 border border-sky-100 dark:border-sky-500/20 rounded-2xl px-5 py-3.5">
-          <p className="text-sm text-sky-800 dark:text-sky-300">
+          <p className="text-sm text-sky-900 dark:text-stone-200">
             Tienes {previousExpenses.length} gasto{previousExpenses.length > 1 ? 's' : ''} fijo{previousExpenses.length > 1 ? 's' : ''} guardado{previousExpenses.length > 1 ? 's' : ''} en {monthIdToLabel(getPreviousMonthId(monthId))}. ¿Los copiamos a este mes?
           </p>
           <Button size="sm" onClick={copyFromPreviousMonth} className="shrink-0">

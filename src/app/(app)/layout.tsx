@@ -33,7 +33,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <MobileTopBar />
         <CycleProvider userId={user.id}>
           {(version) => (
-            <main key={version} className="flex-1 p-4 md:p-6 pb-24 md:pb-6 overflow-auto">
+            <main key={version} className="flex-1 p-4 md:p-6 pb-[calc(var(--bottom-nav-h)+1.25rem)] md:pb-6 overflow-auto">
               <CycleNotice />
               {children}
             </main>

@@ -92,7 +92,7 @@ export default function HistorialPage() {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {[
               { label: 'Prom. Ingresos', value: avg('income'), color: 'text-stone-700 dark:text-stone-200' },
-              { label: 'Prom. Ahorros', value: avg('savings'), color: 'text-sky-600 dark:text-sky-400' },
+              { label: 'Prom. Ahorros', value: avg('savings'), color: 'text-sky-700 dark:text-sky-200' },
               { label: 'Prom. Gastos Fijos', value: avg('fixed'), color: 'text-slate-600 dark:text-slate-300' },
               { label: 'Prom. Gastos Variables', value: avg('variable'), color: 'text-amber-600 dark:text-amber-400' },
             ].map(({ label, value, color }) => (

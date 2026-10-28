@@ -5,7 +5,7 @@ interface Props {
 
 export function Card({ children, className = '' }: Props) {
   return (
-    <div className={`bg-white dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-800 shadow-[0_2px_16px_rgba(41,37,36,0.06)] dark:shadow-none ${className}`}>
+    <div className={`bg-white dark:bg-stone-900 rounded-2xl border border-stone-100 dark:border-stone-800 shadow-[0_2px_16px_rgba(1,28,64,0.08)] dark:shadow-none ${className}`}>
       {children}
     </div>
   );

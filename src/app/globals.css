@@ -1,14 +1,46 @@
 @import "tailwindcss";
 
+/* Paleta Luna (marino y aqua). Las escalas stone y slate de Tailwind se
+   redefinen aquí, así toda la app cambia de color desde un solo lugar.
+   Noche: 950 fondo · 900 tarjeta · 800 borde/campo · 100-400 texto.
+   Día: 50-200 fondos y bordes · 500-900 texto.
+   El texto de noche es casi blanco (100, 200) y gris azulado claro (300, 400):
+   nunca un celeste saturado, que se pierde sobre el azul. */
+@theme {
+  --color-stone-50: #F5FAFC;
+  --color-stone-100: #ECF3F6;
+  --color-stone-200: #DAE6EC;
+  --color-stone-300: #C5D6DF;
+  --color-stone-400: #A6BCC9;
+  --color-stone-500: #4A6E85;
+  --color-stone-600: #3A6280;
+  --color-stone-700: #26658C;
+  --color-stone-800: #164E73;
+  --color-stone-900: #023859;
+  --color-stone-950: #011C40;
+
+  --color-slate-50: #F0F8FB;
+  --color-slate-100: #DDEFF5;
+  --color-slate-200: #A7EBF2;
+  --color-slate-300: #CFE3EC;
+  --color-slate-400: #54ACBF;
+  --color-slate-500: #3F8FA8;
+  --color-slate-600: #2F5D7C;
+  --color-slate-700: #26658C;
+  --color-slate-800: #023859;
+  --color-slate-900: #011C40;
+}
+
 :root {
-  --background: #F7F6F3;
-  --foreground: #1C1C1C;
+  --background: #EDF6F9;
+  --foreground: #011C40;
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   /* Hojas tipo iOS. */
   --ease-sheet: cubic-bezier(0.32, 0.72, 0, 1);
   /* Soltar con resorte: solo en checks, interruptores y el giro del +. */
   --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
-  --bottom-nav-h: 4.5rem;
+  /* Barra flotante: 4rem de alto + 0.75rem de aire + zona segura del teléfono. */
+  --bottom-nav-h: calc(4.75rem + env(safe-area-inset-bottom));
   --paid: var(--color-emerald-700);
   --paid-ink: #ffffff;
   --fresh: var(--color-emerald-50);
@@ -16,12 +48,26 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0c0a09;
-    --foreground: #f5f5f4;
+    --background: #011C40;
+    --foreground: #ECF3F6;
     --paid: var(--color-emerald-300);
     --paid-ink: var(--color-emerald-950);
     --fresh: color-mix(in oklab, var(--color-emerald-500) 16%, transparent);
   }
+}
+
+html {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Sin el retraso de 300 ms del doble toque: la respuesta es inmediata. */
+a,
+button,
+input,
+select,
+textarea,
+[role='button'] {
+  touch-action: manipulation;
 }
 
 body {
@@ -191,5 +237,103 @@ body {
     to {
       opacity: 1;
     }
+  }
+}
+
+/* ── Vidrio líquido (barra inferior y barra superior) ───────────────────────────
+   Material translúcido: el contenido se desenfoca por debajo. El brillo del
+   borde superior simula luz sobre el cristal. */
+.glass {
+  /* Sin `position` aquí: la fija quien la use (fixed, sticky), y una regla fuera de
+     las capas de Tailwind le ganaría. */
+  /* Capa propia: sin ella, el desenfoque rompe el pintado de las hojas que quedan
+     justo encima de la barra. */
+  transform: translateZ(0);
+  isolation: isolate;
+  background: rgba(255, 255, 255, 0.58);
+  -webkit-backdrop-filter: blur(22px) saturate(190%);
+  backdrop-filter: blur(22px) saturate(190%);
+  border: 1px solid rgba(255, 255, 255, 0.62);
+  box-shadow:
+    0 12px 32px rgba(1, 28, 64, 0.16),
+    0 2px 6px rgba(1, 28, 64, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.85),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.25);
+}
+
+.glass::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0) 46%);
+  mix-blend-mode: soft-light;
+}
+
+/* Lente del botón activo: un cristal más claro que se desliza entre pestañas. */
+.glass-lens {
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow:
+    0 3px 12px rgba(1, 28, 64, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+@media (prefers-color-scheme: dark) {
+  .glass {
+    background: rgba(2, 56, 89, 0.5);
+    border-color: rgba(255, 255, 255, 0.16);
+    box-shadow:
+      0 14px 36px rgba(0, 0, 0, 0.5),
+      0 2px 6px rgba(0, 0, 0, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.22),
+      inset 0 -1px 0 rgba(255, 255, 255, 0.05);
+  }
+  .glass::before {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0) 46%);
+    mix-blend-mode: normal;
+  }
+  .glass-lens {
+    background: rgba(255, 255, 255, 0.16);
+    border-color: rgba(255, 255, 255, 0.28);
+    box-shadow:
+      0 3px 12px rgba(0, 0, 0, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  }
+}
+
+/* Transparencia reducida: el vidrio se vuelve un panel sólido y legible. */
+@media (prefers-reduced-transparency: reduce) {
+  .glass {
+    background: #ffffff;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  .glass::before {
+    display: none;
+  }
+  .glass-lens {
+    background: #DDEFF5;
+  }
+}
+@media (prefers-reduced-transparency: reduce) and (prefers-color-scheme: dark) {
+  .glass {
+    background: #023859;
+  }
+  .glass-lens {
+    background: #164E73;
+  }
+}
+
+/* Movimiento reducido: sin deslizamientos ni resortes; solo cambios de opacidad. */
+@media (prefers-reduced-motion: reduce) {
+  .motion-sheet,
+  .motion-pop {
+    animation: fade-in 200ms ease-out both;
+  }
+  .glass-lens,
+  .nav-lens {
+    transition: opacity 150ms ease !important;
   }
 }

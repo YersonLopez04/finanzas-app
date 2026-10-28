@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Muestra: Paletas</title>
+<style>
+  * { box-sizing: border-box; }
+  :root { font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif; }
+  body { margin: 0; background: #d6d3d1; color: #1c1917; transition: background .2s; }
+  body.night { background: #05070d; color: #e7e5e4; }
+  .page { max-width: 1240px; margin: 0 auto; padding: 24px 16px 64px; }
+  h1.page-title { font-size: 22px; margin: 0 0 4px; }
+  .lead { margin: 0 0 16px; font-size: 14px; line-height: 1.5; max-width: 80ch; opacity: .8; }
+  .bar-ctl { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 14px; }
+  .seg { display: inline-flex; flex-wrap: wrap; background: rgba(120,120,120,.28); border-radius: 22px; padding: 3px; gap: 2px; }
+  .seg button { border: 0; background: transparent; padding: 8px 14px; border-radius: 999px; font: inherit; font-size: 14px; font-weight: 600; color: inherit; cursor: pointer; }
+  .seg button[aria-pressed="true"] { background: #fff; color: #1c1917; }
+  .note { background: rgba(120,120,120,.18); border-radius: 16px; padding: 12px 16px; font-size: 13.5px; line-height: 1.5; max-width: 80ch; margin-bottom: 20px; }
+  .note b { display: block; font-size: 15px; margin-bottom: 4px; }
+  .stage { display: flex; flex-wrap: wrap; gap: 28px; justify-content: center; }
+  .col { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  .col-label { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; opacity: .7; }
+  .phone { width: 375px; max-width: calc(100vw - 32px); height: 760px; border-radius: 44px; overflow: hidden; position: relative; border: 10px solid #1c1917; background: var(--bg); color: var(--text); box-shadow: 0 20px 50px rgba(0,0,0,.25); isolation: isolate; }
+  .phone.pal-navy.dark { --bg: #111522; --card: #1E263B; --line: #303D59; --text: #DCE3EF; --muted: #98A9C4; --field: #111522; --field-line: #303D59; --btn: #DCE3EF; --btn-text: #111522; --nav: #1E263B; --nav-line: #303D59; --nav-active: #DCE3EF; --nav-idle: #98A9C4; --hero: linear-gradient(135deg,#303D59,#1E263B); --hero-text: #DCE3EF; --hero-muted: #98A9C4; --ring: #536684; --fill: #6ee7b7; --paid: #6ee7b7; --due: #fcd34d; --due-bg: rgba(245,158,11,.16); --late: #fda4af; --late-bg: rgba(244,63,94,.16); --scrim: rgba(0,0,0,.6); --track: #7dd3fc; --bar: #303D59; }
+  .phone.pal-navy.light { --bg: #F7F6F3; --card: #ffffff; --line: #ece9e5; --text: #1c1917; --muted: #6b645e; --field: #f8f7f5; --field-line: #e7e5e4; --btn: #1E263B; --btn-text: #ffffff; --nav: #ffffff; --nav-line: #ece9e5; --nav-active: #1E263B; --nav-idle: #a8a29e; --hero: linear-gradient(135deg,#1E263B,#303D59); --hero-text: #ffffff; --hero-muted: #98A9C4; --ring: #a8a29e; --fill: #6ee7b7; --paid: #047857; --due: #92400e; --due-bg: #fef3c7; --late: #be123c; --late-bg: #ffe4e6; --scrim: rgba(28,25,23,.35); --track: #0369a1; --bar: #ece9e5; }
+  .phone.pal-bosque.dark { --bg: #051F20; --card: #0B2B26; --line: #163832; --text: #DAF1DE; --muted: #8EB69B; --field: #051F20; --field-line: #163832; --btn: #DAF1DE; --btn-text: #051F20; --nav: #0B2B26; --nav-line: #163832; --nav-active: #DAF1DE; --nav-idle: #8EB69B; --hero: linear-gradient(135deg,#235347,#163832); --hero-text: #DAF1DE; --hero-muted: #BDDCC8; --ring: #5E8A73; --fill: #8EB69B; --paid: #6ee7b7; --due: #fcd34d; --due-bg: rgba(245,158,11,.16); --late: #fda4af; --late-bg: rgba(244,63,94,.16); --scrim: rgba(0,0,0,.6); --track: #7dd3fc; --bar: #163832; }
+  .phone.pal-bosque.light { --bg: #F1F6F2; --card: #ffffff; --line: #e1ebe4; --text: #051F20; --muted: #4f6b60; --field: #f5f9f6; --field-line: #d5e3da; --btn: #163832; --btn-text: #ffffff; --nav: #ffffff; --nav-line: #e1ebe4; --nav-active: #163832; --nav-idle: #8aa093; --hero: linear-gradient(135deg,#163832,#235347); --hero-text: #DAF1DE; --hero-muted: #BDDCC8; --ring: #9db5a8; --fill: #8EB69B; --paid: #047857; --due: #92400e; --due-bg: #fef3c7; --late: #be123c; --late-bg: #ffe4e6; --scrim: rgba(28,25,23,.35); --track: #0369a1; --bar: #e1ebe4; }
+  .phone.pal-vanillia.dark { --bg: #262323; --card: #403D3E; --line: #5b5859; --text: #FFFCD0; --muted: #B9B7A5; --field: #262323; --field-line: #5b5859; --btn: #FFFCD0; --btn-text: #262323; --nav: #403D3E; --nav-line: #5b5859; --nav-active: #FFFCD0; --nav-idle: #B9B7A5; --hero: linear-gradient(135deg,#5c595a,#403D3E); --hero-text: #FFFCD0; --hero-muted: #DAD8C2; --ring: #807E83; --fill: #FFFCD0; --paid: #6ee7b7; --due: #fcd34d; --due-bg: rgba(245,158,11,.16); --late: #fda4af; --late-bg: rgba(244,63,94,.16); --scrim: rgba(0,0,0,.6); --track: #7dd3fc; --bar: #5b5859; }
+  .phone.pal-vanillia.light { --bg: #FBFAEC; --card: #ffffff; --line: #ece9d6; --text: #262323; --muted: #6a676c; --field: #faf9ee; --field-line: #e6e3cf; --btn: #262323; --btn-text: #FFFCD0; --nav: #ffffff; --nav-line: #ece9d6; --nav-active: #262323; --nav-idle: #9a979c; --hero: linear-gradient(135deg,#403D3E,#262323); --hero-text: #FFFCD0; --hero-muted: #B9B7A5; --ring: #a9a6ab; --fill: #FFFCD0; --paid: #047857; --due: #92400e; --due-bg: #fef3c7; --late: #be123c; --late-bg: #ffe4e6; --scrim: rgba(28,25,23,.35); --track: #0369a1; --bar: #ece9d6; }
+  .phone.pal-luna.dark { --bg: #011C40; --card: #023859; --line: #26658C; --text: #A7EBF2; --muted: #54ACBF; --field: #011C40; --field-line: #26658C; --btn: #A7EBF2; --btn-text: #011C40; --nav: #023859; --nav-line: #26658C; --nav-active: #A7EBF2; --nav-idle: #54ACBF; --hero: linear-gradient(135deg,#26658C,#023859); --hero-text: #E9FAFC; --hero-muted: #A7EBF2; --ring: #54ACBF; --fill: #A7EBF2; --paid: #6ee7b7; --due: #fcd34d; --due-bg: rgba(245,158,11,.16); --late: #fda4af; --late-bg: rgba(244,63,94,.16); --scrim: rgba(0,0,0,.6); --track: #7dd3fc; --bar: #26658C; }
+  .phone.pal-luna.light { --bg: #EDF6F9; --card: #ffffff; --line: #d9e9ef; --text: #011C40; --muted: #3a6580; --field: #f4f9fb; --field-line: #cfe2ea; --btn: #023859; --btn-text: #ffffff; --nav: #ffffff; --nav-line: #d9e9ef; --nav-active: #023859; --nav-idle: #8fb0bf; --hero: linear-gradient(135deg,#023859,#26658C); --hero-text: #E9FAFC; --hero-muted: #A7EBF2; --ring: #8fb0bf; --fill: #A7EBF2; --paid: #047857; --due: #92400e; --due-bg: #fef3c7; --late: #be123c; --late-bg: #ffe4e6; --scrim: rgba(28,25,23,.35); --track: #0369a1; --bar: #d9e9ef; }
+  .phone.pal-fresh.dark { --bg: #0D1022; --card: #171B38; --line: #262C55; --text: #FFF4DC; --muted: #A8D5BA; --field: #0D1022; --field-line: #262C55; --btn: #3155FF; --btn-text: #ffffff; --nav: #171B38; --nav-line: #262C55; --nav-active: #A8D5BA; --nav-idle: #8b92c0; --hero: linear-gradient(135deg,#3155FF,#2238b8); --hero-text: #ffffff; --hero-muted: #E6EBFF; --ring: #6a72a8; --fill: #A8D5BA; --paid: #6ee7b7; --due: #fcd34d; --due-bg: rgba(245,158,11,.16); --late: #fda4af; --late-bg: rgba(244,63,94,.16); --scrim: rgba(0,0,0,.6); --track: #7dd3fc; --bar: #262C55; }
+  .phone.pal-fresh.light { --bg: #FFF4DC; --card: #ffffff; --line: #f0e4c8; --text: #17182B; --muted: #6b6a7c; --field: #FFFBF0; --field-line: #efe3c6; --btn: #3155FF; --btn-text: #ffffff; --nav: #ffffff; --nav-line: #f0e4c8; --nav-active: #3155FF; --nav-idle: #a39d8a; --hero: linear-gradient(135deg,#3155FF,#2542d9); --hero-text: #ffffff; --hero-muted: #DCE4FF; --ring: #b9b098; --fill: #A8D5BA; --paid: #047857; --due: #92400e; --due-bg: #fef3c7; --late: #be123c; --late-bg: #ffe4e6; --scrim: rgba(28,25,23,.35); --track: #0369a1; --bar: #f0e4c8; }
+  .status { height: 44px; display: flex; align-items: center; justify-content: space-between; padding: 0 26px; font-size: 14px; font-weight: 600; }
+  .scroll { position: absolute; inset: 44px 0 72px; overflow: hidden; padding: 4px 16px; }
+  svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+
+  .topbar { display: flex; align-items: center; justify-content: space-between; margin: 6px 0 14px; }
+  .topbar h2 { font-size: 20px; margin: 0; letter-spacing: -.01em; }
+  .month { text-align: center; line-height: 1.15; }
+  .month b { display: block; font-size: 14px; font-weight: 600; }
+  .month small { display: block; margin-top: 2px; font-size: 11.5px; color: var(--muted); }
+  .hero { background: var(--hero); color: var(--hero-text); border-radius: 24px; padding: 20px 22px 18px; margin-bottom: 14px; }
+  .hero .label { font-size: 12px; color: var(--hero-muted); }
+  .hero .big { font-size: 34px; font-weight: 750; letter-spacing: -.02em; margin: 4px 0 12px; font-variant-numeric: tabular-nums; }
+  .hero .bar { height: 7px; border-radius: 99px; background: rgba(255,255,255,.16); overflow: hidden; }
+  .hero .bar i { display: block; height: 100%; background: var(--fill); border-radius: 99px; }
+  .hero .foot { display: flex; justify-content: space-between; margin-top: 8px; font-size: 11.5px; color: var(--hero-muted); }
+  .card { background: var(--card); border-radius: 20px; padding: 14px 16px; margin-bottom: 12px; border: 1px solid transparent; }
+  .phone.dark .card { border-color: var(--line); }
+  .card h3 { margin: 0 0 10px; font-size: 14.5px; }
+  .fields { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .fields label { font-size: 11.5px; color: var(--muted); display: block; margin-bottom: 4px; }
+  .fields div { background: var(--field); border: 1px solid var(--field-line); border-radius: 12px; height: 40px; padding: 0 12px; display: flex; align-items: center; font-size: 14px; color: var(--muted); }
+  .alert { display: flex; align-items: center; gap: 10px; background: var(--due-bg); color: var(--due); border-radius: 16px; padding: 11px 14px; font-size: 13.5px; font-weight: 600; margin-bottom: 12px; }
+
+  .section-title { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin: 14px 4px 8px; }
+  .row { display: flex; align-items: center; gap: 12px; padding: 11px 14px; position: relative; }
+  .row + .row::before { content: ''; position: absolute; top: 0; left: 14px; right: 14px; border-top: 1px solid var(--line); }
+  .ring { width: 26px; height: 26px; border-radius: 99px; border: 2px solid var(--ring); flex-shrink: 0; display: grid; place-items: center; color: #fff; }
+    .ring.on { background: var(--paid); border-color: var(--paid); }
+  .phone.dark .ring.on { color: var(--btn-text); }
+  .ring svg { width: 14px; height: 14px; stroke-width: 3; }
+  .row .name { flex: 1; min-width: 0; }
+  .row .name b { display: block; font-size: 14.5px; font-weight: 600; }
+  .pill { display: inline-block; margin-top: 3px; font-size: 11.5px; font-weight: 700; padding: 2px 9px; border-radius: 99px; }
+  .pill.late { background: var(--late-bg); color: var(--late); }
+  .pill.due { background: var(--due-bg); color: var(--due); }
+  .meta { font-size: 12px; color: var(--muted); margin-top: 3px; }
+  .meta.paid { color: var(--paid); }
+  .amt { font-size: 14.5px; font-weight: 650; font-variant-numeric: tabular-nums; }
+
+  .nav { position: absolute; left: 0; right: 0; bottom: 0; height: 72px; background: var(--nav); border-top: 1px solid var(--nav-line); display: flex; align-items: center; justify-content: space-around; padding: 0 8px 6px; z-index: 3; }
+  .nav .it { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 10.5px; font-weight: 600; color: var(--nav-idle); width: 64px; }
+  .nav .it.on { color: var(--nav-active); }
+  .nav .plus { width: 52px; height: 52px; border-radius: 99px; background: var(--btn); color: var(--btn-text); display: grid; place-items: center; margin-top: -26px; box-shadow: 0 6px 18px rgba(0,0,0,.28); }
+  .nav .plus svg { width: 24px; height: 24px; }
+
+  .scrim { position: absolute; inset: 0; background: var(--scrim); z-index: 5; }
+  .sheet { position: absolute; left: 0; right: 0; bottom: 0; z-index: 6; background: var(--card); border-radius: 28px 28px 0 0; padding: 10px 20px 22px; border-top: 1px solid var(--line); }
+  .sheet .grab { width: 38px; height: 4px; border-radius: 9px; background: var(--ring); opacity: .6; margin: 0 auto 12px; }
+  .sheet h3 { margin: 0 0 8px; font-size: 16px; }
+  .amount { text-align: center; font-size: 40px; font-weight: 750; letter-spacing: -.02em; padding: 8px 0 14px; color: var(--text); }
+  .amount i { font-style: normal; color: var(--muted); font-size: 28px; font-weight: 600; margin-right: 6px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+  .chip { padding: 9px 14px; border-radius: 99px; font-size: 14px; font-weight: 600; background: var(--field); border: 1px solid var(--field-line); color: var(--text); }
+  .chip.sel { background: var(--btn); color: var(--btn-text); border-color: var(--btn); }
+  .fold { display: flex; align-items: center; justify-content: space-between; height: 50px; background: var(--field); border: 1px solid var(--field-line); border-radius: 14px; padding: 0 14px; font-size: 14.5px; margin-bottom: 14px; }
+  .fold span { display: flex; gap: 10px; align-items: center; }
+  .cta { width: 100%; height: 50px; border: 0; border-radius: 99px; font: inherit; font-size: 15px; font-weight: 650; background: var(--btn); color: var(--btn-text); }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1 class="page-title">Paletas</h1>
+  <p class="lead">La misma app en cada paleta, de día y de noche. Los colores con significado (pagado, por vencer, vencido) no cambian. Cuando una paleta traía pocos tonos, deduje los que faltaban; está indicado abajo.</p>
+  <div class="bar-ctl">
+    <div class="seg" id="pal" role="group" aria-label="Paleta"><button type="button" aria-pressed="false" data-pal="navy">Azul pizarra</button><button type="button" aria-pressed="false" data-pal="bosque">Verde bosque</button><button type="button" aria-pressed="false" data-pal="vanillia">Vanillia</button><button type="button" aria-pressed="true" data-pal="luna">Luna</button><button type="button" aria-pressed="false" data-pal="fresh">Digital Fresh</button></div>
+    <div class="seg" id="theme" role="group" aria-label="Tema"><button type="button" aria-pressed="false" data-theme="light">Día</button><button type="button" aria-pressed="true" data-theme="dark">Noche</button></div>
+  </div>
+  <div class="note" id="note"></div>
+  <div class="stage">
+    <!-- Resumen -->
+    <div class="col">
+      <div class="col-label">Resumen</div>
+      <div class="phone">
+        <div class="status"><span>9:41</span><span>●●●</span></div>
+        <div class="scroll">
+          <div class="topbar"><h2>Resumen</h2><div class="month"><b>Noviembre 2026</b><small>23 oct – 24 nov</small></div></div>
+          <div class="hero"><div class="label">Restante este mes</div><div class="big">S/ 1,640.00</div><div class="bar"><i style="width:14%"></i></div><div class="foot"><span>Usado: S/ 260.00</span><span>Total: S/ 1,900.00</span></div></div>
+          <div class="alert"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>Cuota Depa vence mañana</div>
+          <div class="card"><h3>Ingresos</h3><div class="fields"><div><label style="display:none"></label>4,500</div><div>0</div><div>0</div></div></div>
+          <div class="card"><h3>Ahorros e inversión</h3><div class="fields" style="grid-template-columns:1fr 90px"><div>Pichincha</div><div>800</div></div></div>
+        </div>
+        <div class="nav"><div class="it on"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Resumen</div><div class="it"><svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>Fijos</div><div class="plus"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></div><div class="it"><svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8"/></svg>Variables</div><div class="it"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg>Ahorros</div></div>
+      </div>
+    </div>
+
+    <!-- Gastos fijos -->
+    <div class="col">
+      <div class="col-label">Gastos fijos</div>
+      <div class="phone">
+        <div class="status"><span>9:41</span><span>●●●</span></div>
+        <div class="scroll">
+          <div class="topbar"><h2>Gastos fijos</h2><div class="month"><b>Noviembre 2026</b><small>23 oct – 24 nov</small></div></div>
+          <div class="hero"><div class="label">Por pagar este mes</div><div class="big">S/ 1,261.00</div><div class="bar"><i style="width:36%"></i></div><div class="foot"><span>Pagado: S/ 455.00</span><span>Total: S/ 1,716.00</span></div></div>
+          <div class="section-title">Por pagar</div>
+          <div class="card" style="padding:4px 0">
+            <div class="row"><span class="ring"></span><span class="name"><b>Cuota Depa</b><span class="pill late">Venció el 28 oct</span></span><span class="amt">S/ 500.00</span></div>
+            <div class="row"><span class="ring"></span><span class="name"><b>Internet SMP</b><span class="pill due">Vence mañana</span></span><span class="amt">S/ 100.00</span></div>
+            <div class="row"><span class="ring"></span><span class="name"><b>Cuota Terreno</b><div class="meta">Vence el 5 nov</div></span><span class="amt">S/ 481.00</span></div>
+          </div>
+          <div class="section-title">Pagados</div>
+          <div class="card" style="padding:4px 0">
+            <div class="row"><span class="ring on"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span><span class="name"><b>iPhone + Watch</b><div class="meta paid">Pagado el 25 oct</div></span><span class="amt">S/ 230.00</span></div>
+          </div>
+        </div>
+        <div class="nav"><div class="it"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Resumen</div><div class="it on"><svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>Fijos</div><div class="plus"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></div><div class="it"><svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8"/></svg>Variables</div><div class="it"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg>Ahorros</div></div>
+      </div>
+    </div>
+
+    <!-- Registro rápido -->
+    <div class="col">
+      <div class="col-label">Registro rápido</div>
+      <div class="phone">
+        <div class="status"><span>9:41</span><span>●●●</span></div>
+        <div class="scroll">
+          <div class="topbar"><h2>Gastos variables</h2></div>
+          <div class="card"><h3>3 gastos — S/ 260.00</h3><div class="meta">Hoy · Comida · S/ 35.00</div></div>
+        </div>
+        <div class="scrim"></div>
+        <div class="sheet">
+          <div class="grab"></div>
+          <h3>Nuevo gasto</h3>
+          <div class="amount"><i>S/</i>45.00</div>
+          <div class="chips"><span class="chip sel">Comida</span><span class="chip">Pasajes</span><span class="chip">Taxi</span><span class="chip">Casa</span><span class="chip">Salud</span></div>
+          <div class="fold"><span><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>Hoy · Sin método</span><svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div>
+          <button class="cta" type="button">Registrar S/ 45.00</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+  const NOTES = {"navy": {"t": "Azul pizarra (propuesta anterior)", "a": "Referencia: sobria y financiera, muy cercana a lo que ya tienes.", "b": "Es la que menos cambia la app; se siente seria y neutra."}, "bosque": {"t": "Verde bosque", "a": "Elegante y asociada al dinero y al crecimiento. De noche es la más envolvente.", "b": "Riesgo: el verde de marca se parece al verde de \"pagado\". Lo resolví con un verde apagado para la marca y esmeralda vivo para pagado, pero hay que vigilarlo."}, "vanillia": {"t": "Vanillia", "a": "La más sobria: gris carbón con crema. Casi sin color, así los estados (rojo, ámbar, verde) destacan muchísimo.", "b": "Venía con 4 colores: deduje los tonos intermedios. Puede sentirse apagada."}, "luna": {"t": "Luna", "a": "Azul aqua y marino: la más cercana a la propuesta anterior, pero más viva y fresca. Mejor acento que el pizarra.", "b": "Es la apuesta segura: azul sobre azul, sin chocar con los estados."}, "fresh": {"t": "Digital Fresh", "a": "La más viva y juvenil: cobalto eléctrico, salvia y crema. Pensada para el día.", "b": "Es clara por naturaleza: el modo noche lo derivé yo. El cobalto fuerte en pantallas de dinero puede cansar y se siente menos \"financiera\"."}};
+  const phones = document.querySelectorAll('.phone');
+  let pal = 'luna', theme = 'dark';
+  function apply() {
+    phones.forEach((p) => { p.className = 'phone pal-' + pal + ' ' + theme; });
+    document.body.classList.toggle('night', theme === 'dark');
+    const n = NOTES[pal];
+    document.getElementById('note').innerHTML = '<b>' + n.t + '</b>' + n.a + '<br>' + n.b;
+    document.querySelectorAll('#pal button').forEach((x) => x.setAttribute('aria-pressed', String(x.dataset.pal === pal)));
+    document.querySelectorAll('#theme button').forEach((x) => x.setAttribute('aria-pressed', String(x.dataset.theme === theme)));
+  }
+  document.querySelectorAll('#pal button').forEach((b) => b.addEventListener('click', () => { pal = b.dataset.pal; apply(); }));
+  document.querySelectorAll('#theme button').forEach((b) => b.addEventListener('click', () => { theme = b.dataset.theme; apply(); }));
+  apply();
+</script>
+</body>
+</html>
