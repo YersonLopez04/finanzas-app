@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
 import { getMonth, saveMonth, getTransactions, getAccounts, saveAccount, addMovement } from '@/lib/db';
-import { getCurrentMonthId, formatCurrency, monthIdToLabel, todayISO } from '@/lib/utils';
+import { formatCurrency, monthIdToLabel, todayISO } from '@/lib/utils';
+import { useCycle } from '@/lib/cycle-context';
 import { notifyOncePerDay } from '@/lib/notifications';
 import { monthTotals } from '@/lib/totals';
 import { dueStatus } from '@/lib/due';
@@ -19,7 +20,8 @@ import { Plus, Trash2, Wallet, PiggyBank, PieChart, History, AlertCircle } from 
 
 export default function DashboardPage() {
   const { user } = useAuth();
-  const [monthId, setMonthId] = useState(getCurrentMonthId());
+  const cycle = useCycle();
+  const [monthId, setMonthId] = useState(cycle.currentMonthId);
   const [monthData, setMonthData] = useState<MonthData | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -122,9 +124,10 @@ export default function DashboardPage() {
     remaining,
   } = monthTotals({ income, savings, fixedExpenses: monthData?.fixedExpenses ?? [] }, transactions);
   const pendingFixed = (monthData?.fixedExpenses ?? []).filter((f) => !f.paid);
-  const isCurrentMonth = monthId === getCurrentMonthId();
-  const dueToday = pendingFixed.filter((f) => dueStatus(f, monthId).kind === 'today');
-  const dueTomorrow = pendingFixed.filter((f) => dueStatus(f, monthId).kind === 'tomorrow');
+  const isCurrentMonth = monthId === cycle.currentMonthId;
+  const cycleMin = cycle.boundsOf(monthId).min;
+  const dueToday = pendingFixed.filter((f) => dueStatus(f, cycleMin).kind === 'today');
+  const dueTomorrow = pendingFixed.filter((f) => dueStatus(f, cycleMin).kind === 'tomorrow');
 
   useEffect(() => {
     if (!user || !isCurrentMonth) return;

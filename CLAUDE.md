@@ -19,6 +19,7 @@ App personal de finanzas de Yerson (y quizá su círculo cercano) que reemplaza 
 - `src/components/ui/ErrorToast.tsx` — aviso global de errores (`reportError`) y pantalla de carga fallida (`LoadError`).
 - `src/components/ui/UndoToast.tsx` — aviso "Deshacer" de los borrados (`showUndo`).
 - `src/lib/due.ts` — **única** regla de vencimiento de gastos fijos (`dueStatus`: venció, hoy, mañana…). La usan Resumen y Gastos fijos.
+- `src/lib/cycle.ts` — **única** fuente del ciclo de cobro: cobro previsto (`payDate`), ciclo vigente (`currentCycleId`), límites (`cycleBounds`), aviso pendiente (`pendingCycle`) y fecha real de un vencimiento (`dueDateInCycle`). `cycle-context.tsx` (`useCycle`) lo reparte a las pantallas; `CycleNotice.tsx` es el aviso de cobro. Probar su lógica con fechas reales si se toca.
 - `src/components/ui/Sheet.tsx` — hoja inferior (teléfono) / ventana centrada (escritorio). `Switch.tsx` y `AmountInput.tsx` son sus piezas.
 - `src/lib/quickAdd.ts` — eventos entre el + de la barra y la hoja de registro rápido (el + se vuelve × y la cierra).
 - `src/app/(app)/*` — pantallas: dashboard (Resumen), gastos-fijos, gastos-variables, ahorros, historial, perfil.
@@ -32,6 +33,7 @@ Se ejecutan a mano en Supabase → SQL Editor. Claude no tiene acceso a la base.
 | Migración | Estado |
 |---|---|
 | 001–005 | Ejecutadas (005 `my_share`, el 2026-10-25) |
+| 006 `months.start_date` | **Pendiente: ejecutar antes del push.** Sin ella la app no carga (el ciclo lee esa columna) |
 
 Al agregar una columna: migración nueva + actualizar `schema.sql` + tipos + `db.ts` + respaldo CSV (export e import, aceptando backups viejos sin la columna).
 
@@ -48,6 +50,7 @@ Al agregar una columna: migración nueva + actualizar `schema.sql` + tipos + `db
 
 ## Decisiones del dueño
 
+- **Ciclo de cobro** (2026-10-27, muestra en `.impeccable/mocks/ciclo-de-cobro.html`): el "mes" de la app es el ciclo de cobro, no el calendario. El ciclo `2026-11` es el dinero de noviembre y empieza el día que se cobra en octubre (el 25, o el día hábil anterior si cae sábado, domingo o feriado fijo). Cada ciclo guarda su inicio real en `months.start_date`; la app avisa y el dueño confirma el día (los feriados móviles no se conocen). Hasta confirmar sigue en el ciclo anterior. Al confirmar, los gastos con fecha desde ese día pasan al ciclo nuevo. Meses anteriores a la migración 006 quedan como mes calendario. **El día de pago de un gasto fijo es de calendario** ("5" = el 5 del mes que cae dentro del ciclo), no depende del cobro.
 - **Gasto compartido** (2026-10-24): cuesta `monto − lo que ya me devolvieron`. Lo que aún me deben sigue contando como gasto hasta que me lo paguen. "Te deben" = `monto − mi parte − lo que ya me pagaron`. Sin "mi parte" (gastos antiguos) se asume que te deben todo.
 - **Gastos fijos y registro rápido, opción B** (2026-10-25, muestra en `.impeccable/mocks/fijos-y-registro.html`): fijos en secciones Por pagar · Presupuestos · Pagados, sin botón Guardar, editar en hoja. Registro rápido: monto y categoría a la vista; fecha (Hoy), método, nota y compartido plegados en una fila. La categoría empieza sin elegir a propósito.
 - Cambios visuales: primero una muestra HTML con modo día y noche a 375 px, aprobada por el dueño; recién después se toca la app.

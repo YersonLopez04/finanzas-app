@@ -4,7 +4,8 @@ import { useState } from 'react';
 import { Calendar, Check, ChevronDown } from 'lucide-react';
 import { owedToYou } from '@/lib/totals';
 import { categoryBadgeClass } from '@/lib/categoryColors';
-import { formatCurrency, formatShortDate, monthBounds, todayISO, toISODate } from '@/lib/utils';
+import { formatCurrency, formatShortDate, todayISO, toISODate } from '@/lib/utils';
+import type { CycleBounds } from '@/lib/cycle';
 import { Sheet } from '@/components/ui/Sheet';
 import { Switch } from '@/components/ui/Switch';
 import { Input } from '@/components/ui/Input';
@@ -43,7 +44,7 @@ export function ExpenseSheet({
   initial,
   editing,
   categories,
-  monthId,
+  bounds,
   saving,
   onClose,
   onSubmit,
@@ -52,7 +53,7 @@ export function ExpenseSheet({
   initial: ExpenseForm;
   editing: boolean;
   categories: Category[];
-  monthId: string;
+  bounds: CycleBounds;
   saving: boolean;
   onClose: () => void;
   onSubmit: (form: ExpenseForm) => void;
@@ -67,7 +68,7 @@ export function ExpenseSheet({
   const quickDates = [
     { value: today, label: 'Hoy' },
     { value: yesterday, label: 'Ayer' },
-  ].filter((d) => d.value.startsWith(monthId));
+  ].filter((d) => d.value >= bounds.min && (bounds.max === null || d.value <= bounds.max));
   const isQuickDate = quickDates.some((d) => d.value === form.date);
   const [pickOtherDate, setPickOtherDate] = useState(!isQuickDate);
 
@@ -179,7 +180,8 @@ export function ExpenseSheet({
               <Input
                 type="date"
                 aria-label="Fecha del gasto"
-                {...monthBounds(monthId)}
+                min={bounds.min}
+                max={bounds.max ?? undefined}
                 value={form.date}
                 onChange={(e) => e.target.value && set('date', e.target.value)}
               />

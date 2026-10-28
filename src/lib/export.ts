@@ -29,8 +29,8 @@ export async function exportAllData(userId: string) {
   const blocks = [
     toCsvBlock(
       'Meses',
-      ['mes', 'ingreso_fijo', 'ingreso_variable', 'ingreso_extras', 'creado'],
-      months.map((m) => [m.id, m.income.fixed, m.income.variable, m.income.extras, m.createdAt])
+      ['mes', 'ingreso_fijo', 'ingreso_variable', 'ingreso_extras', 'creado', 'inicio'],
+      months.map((m) => [m.id, m.income.fixed, m.income.variable, m.income.extras, m.createdAt, m.startDate ?? ''])
     ),
     toCsvBlock(
       'Ahorros asignados por mes',

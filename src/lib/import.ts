@@ -1,4 +1,4 @@
-import { saveMonth, addTransaction, saveAccount, addMovement } from './db';
+import { saveMonth, setMonthStart, addTransaction, saveAccount, addMovement } from './db';
 import type { SavingsAllocation, FixedExpense, PaymentMethod, AccountCurrency, AccountType } from '@/types';
 
 function parseCsvLine(line: string): string[] {
@@ -135,6 +135,8 @@ export async function importAllData(userId: string, file: File): Promise<ImportS
       fixedExpenses: fixedByMonth.get(monthId) ?? [],
       createdAt: monthRow?.creado || new Date().toISOString(),
     });
+    // Backups anteriores no traen 'inicio': el mes queda como calendario.
+    if (monthRow?.inicio) await setMonthStart(userId, monthId, monthRow.inicio);
   }
 
   // 4. Gastos variables

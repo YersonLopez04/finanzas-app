@@ -43,6 +43,7 @@ export interface FixedExpenseEntry {
 
 export interface MonthData {
   id: string; // "2024-06"
+  startDate?: string; // ISO: día en que empieza el ciclo de cobro; ausente = mes calendario
   income: Income;
   savings: SavingsAllocation[];
   fixedExpenses: FixedExpense[];

@@ -8,6 +8,7 @@
 create table months (
   user_id uuid not null references auth.users(id) on delete cascade,
   id text not null, -- formato "2024-06"
+  start_date date, -- día en que empieza el ciclo de cobro de este mes; null = mes calendario
   income_fixed numeric not null default 0,
   income_variable numeric not null default 0,
   income_extras numeric not null default 0,

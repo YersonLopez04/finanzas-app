@@ -8,6 +8,8 @@ import { BottomNav } from '@/components/layout/BottomNav';
 import { MobileTopBar } from '@/components/layout/MobileTopBar';
 import { ErrorToast } from '@/components/ui/ErrorToast';
 import { UndoToast } from '@/components/ui/UndoToast';
+import { CycleNotice } from '@/components/layout/CycleNotice';
+import { CycleProvider } from '@/lib/cycle-context';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -29,7 +31,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       {/* Contenido principal */}
       <div className="flex-1 flex flex-col min-w-0">
         <MobileTopBar />
-        <main className="flex-1 p-4 md:p-6 pb-24 md:pb-6 overflow-auto">{children}</main>
+        <CycleProvider userId={user.id}>
+          {(version) => (
+            <main key={version} className="flex-1 p-4 md:p-6 pb-24 md:pb-6 overflow-auto">
+              <CycleNotice />
+              {children}
+            </main>
+          )}
+        </CycleProvider>
       </div>
 
       {/* Bottom nav — solo mobile */}

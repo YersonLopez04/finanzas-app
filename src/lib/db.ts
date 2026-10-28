@@ -75,7 +75,7 @@ function check<T>(res: QueryResult<T>, action: string): T {
   return res.data as T;
 }
 
-interface MonthRow { id: string; income_fixed: number | string; income_variable: number | string; income_extras: number | string; created_at: string; }
+interface MonthRow { id: string; start_date: string | null; income_fixed: number | string; income_variable: number | string; income_extras: number | string; created_at: string; }
 interface SavingRow { id: string; name: string; amount: number | string; account_id: string | null; }
 interface FixedExpenseRow { id: string; name: string; amount: number | string; paid: boolean; paid_date: string | null; due_day: number | null; tracked: boolean | null; order_index: number; }
 interface FixedExpenseEntryRow { id: string; fixed_expense_id: string; user_id: string; date: string; amount: number | string; note: string | null; created_at: string; }
@@ -117,6 +117,7 @@ export async function getMonth(userId: string, monthId: string): Promise<MonthDa
 
   return {
     id: month.id,
+    startDate: month.start_date ?? undefined,
     income: {
       fixed: Number(month.income_fixed),
       variable: Number(month.income_variable),
@@ -204,6 +205,60 @@ export async function saveMonth(userId: string, monthId: string, data: Partial<M
   }
 }
 
+// Inicios de ciclo confirmados: { "2026-11": "2026-10-23" }. Los meses sin fecha
+// (anteriores a la migración 006) no aparecen y se tratan como mes calendario.
+export async function getCycleStarts(userId: string): Promise<Record<string, string>> {
+  if (DEMO_MODE) {
+    return Object.fromEntries(
+      Object.values(demoStore.months).filter((m) => m.startDate).map((m) => [m.id, m.startDate as string])
+    );
+  }
+  const data = check(
+    await sb().from('months').select('id, start_date').eq('user_id', userId).not('start_date', 'is', null),
+    'cargar los ciclos de cobro'
+  );
+  return Object.fromEntries(((data ?? []) as { id: string; start_date: string }[]).map((m) => [m.id, m.start_date]));
+}
+
+// Confirma el inicio de un ciclo. Los gastos del ciclo anterior con fecha desde
+// ese día pasan al nuevo: ya eran plata del mes que empezaba. Se mueven primero
+// y recién después se guarda la fecha: mover es repetible, así que si falla
+// algo en medio, el aviso sigue ahí y reintentar termina el trabajo.
+export async function startCycle(userId: string, monthId: string, startDate: string, previousMonthId: string) {
+  if (DEMO_MODE) {
+    demoStore.transactions.forEach((t) => {
+      if (t.monthId === previousMonthId && t.date >= startDate) t.monthId = monthId;
+    });
+    demoStore.months[monthId] = {
+      ...(demoStore.months[monthId] ?? {
+        id: monthId,
+        income: { fixed: 0, variable: 0, extras: 0 },
+        savings: [],
+        fixedExpenses: [],
+        createdAt: new Date().toISOString(),
+      }),
+      startDate,
+    };
+    return;
+  }
+
+  check(
+    await sb().from('transactions').update({ month_id: monthId }).eq('user_id', userId).eq('month_id', previousMonthId).gte('date', startDate),
+    'pasar los gastos al nuevo ciclo'
+  );
+  await setMonthStart(userId, monthId, startDate);
+}
+
+// Solo escribe la fecha de inicio: no toca ingresos ni nada más del mes.
+export async function setMonthStart(userId: string, monthId: string, startDate: string) {
+  if (DEMO_MODE) {
+    const month = demoStore.months[monthId];
+    if (month) month.startDate = startDate;
+    return;
+  }
+  check(await sb().from('months').upsert({ user_id: userId, id: monthId, start_date: startDate }), 'guardar el inicio del ciclo');
+}
+
 function deleteMonthRowsExcept(table: 'savings_allocations' | 'fixed_expenses', userId: string, monthId: string, keepIds: string[]) {
   let del = sb().from(table).delete().eq('user_id', userId).eq('month_id', monthId);
   if (keepIds.length > 0) del = del.not('id', 'in', `(${keepIds.join(',')})`);
@@ -229,6 +284,7 @@ export async function listMonths(userId: string): Promise<MonthData[]> {
 
   return ((months ?? []) as MonthRow[]).map((m) => ({
     id: m.id,
+    startDate: m.start_date ?? undefined,
     income: {
       fixed: Number(m.income_fixed),
       variable: Number(m.income_variable),

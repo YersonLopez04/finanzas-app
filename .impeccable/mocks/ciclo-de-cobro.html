@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Muestra: Ciclo de cobro</title>
+<style>
+  * { box-sizing: border-box; }
+  :root { --ease-out: cubic-bezier(0.23, 1, 0.32, 1); --ease-sheet: cubic-bezier(0.32, 0.72, 0, 1); font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif; }
+  body { margin: 0; background: #e7e5e4; color: #1c1917; }
+  .page { max-width: 1240px; margin: 0 auto; padding: 24px 16px 64px; }
+  h1.page-title { font-size: 22px; margin: 0 0 4px; }
+  .lead { margin: 0 0 16px; color: #57534e; font-size: 14px; line-height: 1.5; max-width: 75ch; }
+  .seg { display: inline-flex; background: #d6d3d1; border-radius: 999px; padding: 3px; gap: 2px; margin-bottom: 20px; }
+  .seg button { border: 0; background: transparent; padding: 8px 16px; border-radius: 999px; font: inherit; font-size: 14px; font-weight: 600; color: #44403c; cursor: pointer; }
+  .seg button[aria-pressed="true"] { background: #fff; color: #1c1917; box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+  .stage { display: flex; flex-wrap: wrap; gap: 28px; justify-content: center; }
+  .col { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  .col-label { font-size: 13px; font-weight: 700; color: #57534e; text-transform: uppercase; letter-spacing: .06em; }
+  .col-note { font-size: 13px; color: #57534e; max-width: 335px; text-align: center; line-height: 1.45; }
+
+  .phone { width: 375px; max-width: calc(100vw - 32px); height: 700px; border-radius: 44px; overflow: hidden; position: relative; border: 10px solid #1c1917; background: var(--bg); color: var(--text); box-shadow: 0 20px 50px rgba(0,0,0,.18); isolation: isolate; }
+  .phone.light { --bg: #F7F6F3; --card: #fff; --line: #ece9e5; --text: #1c1917; --muted: #6b645e; --faint: #a8a29e; --field: #f8f7f5; --field-line: #e7e5e4; --primary: #1e293b; --on-primary: #fff; --sec: #f5f5f4; --sec-text: #44403c; --track: #0369a1; --track-bg: #e0f2fe; --track-line: #bae6fd; --hero: #1e293b; --hero-text: #f8fafc; --hero-muted: #cbd5e1; --scrim: rgba(28,25,23,.35); }
+  .phone.dark { --bg: #0c0a09; --card: #1c1917; --line: #292524; --text: #f5f5f4; --muted: #a8a29e; --faint: #78716c; --field: #231f1d; --field-line: #3a3431; --primary: #e2e8f0; --on-primary: #0f172a; --sec: #292524; --sec-text: #e7e5e4; --track: #7dd3fc; --track-bg: rgba(14,165,233,.14); --track-line: rgba(14,165,233,.28); --hero: #1e293b; --hero-text: #f8fafc; --hero-muted: #cbd5e1; --scrim: rgba(0,0,0,.55); }
+  .status { height: 44px; display: flex; align-items: center; justify-content: space-between; padding: 0 26px; font-size: 14px; font-weight: 600; }
+  .scroll { position: absolute; inset: 44px 0 0; overflow: hidden; padding: 4px 16px; }
+  svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+
+  .topbar { display: flex; align-items: center; justify-content: space-between; margin: 6px 0 14px; }
+  .topbar h2 { font-size: 20px; margin: 0; letter-spacing: -.01em; }
+  .month { display: flex; align-items: center; gap: 2px; }
+  .month .icon-btn { width: 32px; height: 32px; display: grid; place-items: center; color: var(--muted); }
+  .month .label { text-align: center; min-width: 124px; line-height: 1.15; }
+  .month .label b { display: block; font-size: 14px; font-weight: 600; }
+  .month .label small { display: block; margin-top: 2px; font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+  /* Aviso: mismo lenguaje que el aviso "¿Los copiamos a este mes?" */
+  .notice { background: var(--track-bg); border: 1px solid var(--track-line); border-radius: 18px; padding: 14px 16px; margin-bottom: 14px; color: var(--track); }
+  .notice h3 { margin: 0 0 3px; font-size: 14.5px; }
+  .notice p { margin: 0 0 12px; font-size: 13.5px; line-height: 1.45; }
+  .notice .actions { display: flex; gap: 8px; }
+  .btn { border: 0; border-radius: 999px; font: inherit; font-size: 14px; font-weight: 600; padding: 9px 16px; cursor: pointer; min-height: 40px; }
+  .btn.primary { background: #1e293b; color: #fff; }
+  .phone.dark .btn.primary { background: #e2e8f0; color: #0f172a; }
+  .btn.secondary { background: var(--card); color: var(--sec-text); }
+  .btn.grow { flex: 1; }
+
+  .hero { background: var(--hero); color: var(--hero-text); border-radius: 24px; padding: 22px 22px 20px; }
+  .hero .label { font-size: 12px; color: var(--hero-muted); }
+  .hero .big { font-size: 34px; font-weight: 750; letter-spacing: -.02em; margin: 4px 0 14px; font-variant-numeric: tabular-nums; }
+  .hero .bar { height: 7px; border-radius: 99px; background: rgba(255,255,255,.15); overflow: hidden; }
+  .hero .bar i { display: block; height: 100%; background: #6ee7b7; border-radius: 99px; }
+  .hero .foot { display: flex; justify-content: space-between; margin-top: 8px; font-size: 11.5px; color: var(--hero-muted); }
+  .ghost { margin-top: 14px; background: var(--card); border-radius: 20px; padding: 16px; font-size: 13px; color: var(--muted); }
+  .ghost b { color: var(--text); display: block; margin-bottom: 6px; font-size: 14px; }
+
+  .scrim { position: absolute; inset: 0; background: var(--scrim); z-index: 5; }
+  .sheet { position: absolute; left: 0; right: 0; bottom: 0; z-index: 6; background: var(--card); border-radius: 28px 28px 0 0; padding: 10px 20px 24px; }
+  .sheet .grab { width: 38px; height: 4px; border-radius: 9px; background: var(--faint); opacity: .5; margin: 0 auto 14px; }
+  .sheet h3 { margin: 0 0 4px; font-size: 17px; }
+  .sheet p { margin: 0 0 14px; font-size: 13.5px; color: var(--muted); line-height: 1.45; }
+  .field { display: flex; align-items: center; gap: 10px; background: var(--field); border: 1px solid var(--field-line); border-radius: 14px; padding: 0 14px; height: 50px; font-size: 16px; margin-bottom: 8px; }
+  .field svg { color: var(--muted); }
+  .hint { font-size: 12.5px; color: var(--muted); margin: 0 2px 16px; line-height: 1.4; }
+  .sheet .btn { width: 100%; min-height: 50px; font-size: 15px; }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1 class="page-title">Ciclo de cobro</h1>
+  <p class="lead">El "mes" de la app pasa a ser el ciclo de cobro: noviembre es el dinero que cobraste a fines de octubre. Cuando llega tu cobro, la app avisa y tú confirmas el día real. Los gastos de esos días pasan solos al ciclo nuevo. Abajo: ① el aviso, ② si cobraste otro día, ③ ya confirmado, con el rango del ciclo bajo el nombre del mes.</p>
+  <div class="seg" role="group" aria-label="Tema">
+    <button type="button" aria-pressed="true" data-theme="light">Día</button>
+    <button type="button" aria-pressed="false" data-theme="dark">Noche</button>
+  </div>
+
+  <div class="stage">
+    <!-- ① Aviso -->
+    <div class="col">
+      <div class="col-label">① Llegó tu cobro</div>
+      <div class="phone light">
+        <div class="status"><span>9:41</span><span>●●●</span></div>
+        <div class="scroll">
+          <div class="topbar"><h2>Resumen</h2>
+            <div class="month"><span class="icon-btn"><svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg></span>
+              <span class="label"><b>Octubre 2026</b><small>1 oct – 22 oct</small></span>
+              <span class="icon-btn"><svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></span></div></div>
+          <div class="notice">
+            <h3>Empieza noviembre</h3>
+            <p>Tu cobro previsto era el vie 23 oct. ¿Cobraste ese día? Tus gastos desde entonces pasarán a noviembre.</p>
+            <div class="actions"><button class="btn primary grow" type="button">Sí, el vie 23 oct</button><button class="btn secondary" type="button">Otro día</button></div>
+          </div>
+          <div class="hero"><div class="label">Restante este mes</div><div class="big">S/ 412.50</div><div class="bar"><i style="width:78%"></i></div><div class="foot"><span>Usado: S/ 1,487.50</span><span>Total: S/ 1,900.00</span></div></div>
+          <div class="ghost"><b>Ahorros</b>…el resto de la pantalla sigue igual.</div>
+        </div>
+      </div>
+      <div class="col-note">Aparece arriba de todas las pantallas desde 2 días antes del cobro previsto, hasta que confirmes. Mientras tanto sigues en octubre.</div>
+    </div>
+
+    <!-- ② Otro día -->
+    <div class="col">
+      <div class="col-label">② Cobraste otro día</div>
+      <div class="phone light">
+        <div class="status"><span>9:41</span><span>●●●</span></div>
+        <div class="scroll">
+          <div class="topbar"><h2>Resumen</h2>
+            <div class="month"><span class="icon-btn"><svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg></span>
+              <span class="label"><b>Octubre 2026</b><small>1 oct – 22 oct</small></span>
+              <span class="icon-btn"><svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></span></div></div>
+          <div class="hero"><div class="label">Restante este mes</div><div class="big">S/ 412.50</div><div class="bar"><i style="width:78%"></i></div></div>
+        </div>
+        <div class="scrim"></div>
+        <div class="sheet">
+          <div class="grab"></div>
+          <h3>¿Qué día cobraste?</h3>
+          <p>Ese día empieza noviembre.</p>
+          <div class="field"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>jue 22 oct 2026</div>
+          <p class="hint">Puedes elegir desde el sáb 24 sep hasta hoy. Los gastos con fecha desde ese día pasan a noviembre.</p>
+          <button class="btn primary" type="button">Empezar noviembre</button>
+        </div>
+      </div>
+      <div class="col-note">Hoja igual que las demás (inferior en teléfono, centrada en escritorio). El selector de fecha solo deja días válidos.</div>
+    </div>
+
+    <!-- ③ Confirmado -->
+    <div class="col">
+      <div class="col-label">③ Ya empezó noviembre</div>
+      <div class="phone light">
+        <div class="status"><span>9:41</span><span>●●●</span></div>
+        <div class="scroll">
+          <div class="topbar"><h2>Resumen</h2>
+            <div class="month"><span class="icon-btn"><svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg></span>
+              <span class="label"><b>Noviembre 2026</b><small>desde 23 oct</small></span>
+              <span class="icon-btn"><svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></span></div></div>
+          <div class="hero"><div class="label">Restante este mes</div><div class="big">S/ 1,640.00</div><div class="bar"><i style="width:14%"></i></div><div class="foot"><span>Usado: S/ 260.00</span><span>Total: S/ 1,900.00</span></div></div>
+          <div class="ghost"><b>Qué cambió</b>La app abre en noviembre. El + registra aquí. Octubre queda en el historial con su rango (1 oct – 22 oct). Un gasto fijo "día 5" sigue siendo el 5 del calendario: vence el 5 nov.</div>
+        </div>
+      </div>
+      <div class="col-note">Bajo el nombre del mes, una línea chica con el rango. Cuando el ciclo sigue abierto dice "desde 23 oct"; cuando ya terminó, "23 oct – 24 nov".</div>
+    </div>
+  </div>
+</div>
+<script>
+  const phones = document.querySelectorAll('.phone');
+  document.querySelectorAll('.seg button').forEach((b) => b.addEventListener('click', () => {
+    document.querySelectorAll('.seg button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+    phones.forEach((p) => { p.classList.remove('light', 'dark'); p.classList.add(b.dataset.theme); });
+  }));
+</script>
+</body>
+</html>

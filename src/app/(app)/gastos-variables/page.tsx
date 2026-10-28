@@ -4,7 +4,9 @@ import { Suspense, useCallback, useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { getTransactions, addTransaction, updateTransaction, deleteTransaction, getCategories, addCategory, deleteCategory } from '@/lib/db';
-import { getCurrentMonthId, formatCurrency, insertAt, defaultDateForMonth, formatShortDate } from '@/lib/utils';
+import { formatCurrency, insertAt, defaultDateForCycle, formatShortDate } from '@/lib/utils';
+import { useCycle } from '@/lib/cycle-context';
+import type { CycleBounds } from '@/lib/cycle';
 import { announceQuickAdd, onQuickAddClose, onQuickAddOpen } from '@/lib/quickAdd';
 import { ExpenseSheet, type ExpenseForm } from './ExpenseSheet';
 import { showUndo } from '@/components/ui/UndoToast';
@@ -25,9 +27,9 @@ const PAYMENT_ICONS: Record<PaymentMethod, typeof CreditCard> = {
 };
 
 // La categoría empieza vacía: elegirla es un toque y evita guardar en la equivocada.
-function emptyForm(monthId: string): ExpenseForm {
+function emptyForm(bounds: CycleBounds): ExpenseForm {
   return {
-    date: defaultDateForMonth(monthId),
+    date: defaultDateForCycle(bounds),
     amount: '',
     category: '',
     description: '',
@@ -66,7 +68,8 @@ function GastosVariablesContent() {
   const { user } = useAuth();
   const searchParams = useSearchParams();
   const router = useRouter();
-  const [monthId, setMonthId] = useState(getCurrentMonthId());
+  const cycle = useCycle();
+  const [monthId, setMonthId] = useState(cycle.currentMonthId);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<unknown>(null);
@@ -353,10 +356,10 @@ function GastosVariablesContent() {
       {sheet && (
         <ExpenseSheet
           key={sheet.key}
-          initial={sheet.editing ? formFor(sheet.editing) : emptyForm(monthId)}
+          initial={sheet.editing ? formFor(sheet.editing) : emptyForm(cycle.boundsOf(monthId))}
           editing={!!sheet.editing}
           categories={categories}
-          monthId={monthId}
+          bounds={cycle.boundsOf(monthId)}
           saving={saving}
           onClose={closeSheet}
           onSubmit={handleSubmit}

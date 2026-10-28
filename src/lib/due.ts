@@ -1,5 +1,6 @@
 import type { FixedExpense } from '@/types';
-import { getCurrentMonthId } from './utils';
+import { addDays, todayISO } from './utils';
+import { dueDateInCycle } from './cycle';
 
 // Única regla de vencimiento de un gasto fijo. Resumen (avisos) y Gastos fijos
 // la usan para que nunca digan cosas distintas del mismo pago.
@@ -7,32 +8,24 @@ import { getCurrentMonthId } from './utils';
 export type DueStatus =
   | { kind: 'paid' }
   | { kind: 'none' } // sin día de pago, o presupuesto que se gasta de a pocos
-  | { kind: 'late'; day: number }
-  | { kind: 'today'; day: number }
-  | { kind: 'tomorrow'; day: number }
-  | { kind: 'upcoming'; day: number };
+  | { kind: 'late'; date: string }
+  | { kind: 'today'; date: string }
+  | { kind: 'tomorrow'; date: string }
+  | { kind: 'upcoming'; date: string };
 
-// Día de pago real en ese mes: un "31" vence el 30 en noviembre.
-export function effectiveDueDay(dueDay: number, monthId: string) {
-  const [year, month] = monthId.split('-').map(Number);
-  return Math.min(dueDay, new Date(year, month, 0).getDate());
-}
-
+// `cycleMin` es el primer día del ciclo que se está viendo. El día de pago es
+// una fecha de calendario: no depende de cuándo cobras.
 export function dueStatus(
   expense: Pick<FixedExpense, 'paid' | 'dueDay' | 'tracked'>,
-  monthId: string,
-  now = new Date()
+  cycleMin: string,
+  today = todayISO()
 ): DueStatus {
   if (expense.tracked) return { kind: 'none' };
   if (expense.paid) return { kind: 'paid' };
   if (!expense.dueDay) return { kind: 'none' };
-  const day = effectiveDueDay(expense.dueDay, monthId);
-  const current = getCurrentMonthId();
-  if (monthId < current) return { kind: 'late', day };
-  if (monthId > current) return { kind: 'upcoming', day };
-  const today = now.getDate();
-  if (day < today) return { kind: 'late', day };
-  if (day === today) return { kind: 'today', day };
-  if (day === today + 1) return { kind: 'tomorrow', day };
-  return { kind: 'upcoming', day };
+  const date = dueDateInCycle(expense.dueDay, cycleMin);
+  if (date < today) return { kind: 'late', date };
+  if (date === today) return { kind: 'today', date };
+  if (date === addDays(today, 1)) return { kind: 'tomorrow', date };
+  return { kind: 'upcoming', date };
 }

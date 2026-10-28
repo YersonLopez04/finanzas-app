@@ -1,7 +1,9 @@
 'use client';
 
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { monthIdToLabel } from '@/lib/utils';
+import { formatDayMonth, monthIdToLabel } from '@/lib/utils';
+import { useCycle } from '@/lib/cycle-context';
+import { cycleRangeLabel } from '@/lib/cycle';
 
 interface Props {
   monthId: string;
@@ -15,6 +17,7 @@ function addMonths(monthId: string, delta: number) {
 }
 
 export function MonthPicker({ monthId, onChange }: Props) {
+  const range = cycleRangeLabel(useCycle().boundsOf(monthId), formatDayMonth);
   return (
     <div className="flex items-center gap-2">
       <button
@@ -24,8 +27,11 @@ export function MonthPicker({ monthId, onChange }: Props) {
       >
         <ChevronLeft size={16} />
       </button>
-      <span className="text-sm font-medium text-stone-700 dark:text-stone-200 inline-block first-letter:uppercase min-w-[140px] text-center">
-        {monthIdToLabel(monthId)}
+      <span className="min-w-[140px] text-center leading-tight">
+        <span className="block text-sm font-medium text-stone-700 dark:text-stone-200 first-letter:uppercase">
+          {monthIdToLabel(monthId)}
+        </span>
+        <span className="mt-0.5 block text-[11.5px] tabular-nums text-stone-500 dark:text-stone-400">{range}</span>
       </span>
       <button
         onClick={() => onChange(addMonths(monthId, 1))}

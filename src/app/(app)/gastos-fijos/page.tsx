@@ -11,7 +11,6 @@ import {
   deleteFixedExpenseEntry,
 } from '@/lib/db';
 import {
-  getCurrentMonthId,
   getPreviousMonthId,
   monthIdToLabel,
   formatCurrency,
@@ -19,9 +18,10 @@ import {
   insertAt,
   formatShortDate,
   formatDayMonth,
-  defaultDateForMonth,
+  defaultDateForCycle,
 } from '@/lib/utils';
 import { dueStatus } from '@/lib/due';
+import { useCycle } from '@/lib/cycle-context';
 import { showUndo } from '@/components/ui/UndoToast';
 import { MonthPicker } from '@/components/layout/MonthPicker';
 import { Button } from '@/components/ui/Button';
@@ -39,7 +39,7 @@ type SaveState = 'saved' | 'saving' | 'error';
 const sortDay = (e: FixedExpense) => e.dueDay ?? 99;
 
 function DueMeta({ expense, monthId }: { expense: FixedExpense; monthId: string }) {
-  const status = dueStatus(expense, monthId);
+  const status = dueStatus(expense, useCycle().boundsOf(monthId).min);
   const pill = 'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11.5px] font-bold';
   switch (status.kind) {
     case 'paid':
@@ -53,7 +53,7 @@ function DueMeta({ expense, monthId }: { expense: FixedExpense; monthId: string 
       return (
         <p className="mt-0.5">
           <span className={`${pill} bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300`}>
-            <AlertCircle size={12} strokeWidth={2.5} /> Venció el {status.day}
+            <AlertCircle size={12} strokeWidth={2.5} /> Venció el {formatDayMonth(status.date)}
           </span>
         </p>
       );
@@ -70,7 +70,7 @@ function DueMeta({ expense, monthId }: { expense: FixedExpense; monthId: string 
         </p>
       );
     case 'upcoming':
-      return <p className="mt-0.5 text-xs text-stone-500 dark:text-stone-400">Vence el {status.day}</p>;
+      return <p className="mt-0.5 text-xs text-stone-500 dark:text-stone-400">Vence el {formatDayMonth(status.date)}</p>;
     default:
       return <p className="mt-0.5 text-xs text-stone-500 dark:text-stone-400">Sin día de pago</p>;
   }
@@ -345,6 +345,7 @@ function EntrySheet({
   onClose: () => void;
   onAdded: (amount: number, entryId: string) => void;
 }) {
+  const cycle = useCycle();
   const [amount, setAmount] = useState('');
   const [note, setNote] = useState('');
   const [saving, setSaving] = useState(false);
@@ -358,7 +359,7 @@ function EntrySheet({
       const id = await addFixedExpenseEntry({
         fixedExpenseId: expense.id,
         userId,
-        date: defaultDateForMonth(monthId),
+        date: defaultDateForCycle(cycle.boundsOf(monthId)),
         amount: value,
         note: note.trim(),
       });
@@ -399,7 +400,8 @@ function EntrySheet({
 
 export default function GastosFijosPage() {
   const { user } = useAuth();
-  const [monthId, setMonthId] = useState(getCurrentMonthId());
+  const cycle = useCycle();
+  const [monthId, setMonthId] = useState(cycle.currentMonthId);
   const [expenses, setExpensesState] = useState<FixedExpense[]>([]);
   const [monthData, setMonthData] = useState<MonthData | null>(null);
   const [previousExpenses, setPreviousExpenses] = useState<FixedExpense[]>([]);
@@ -572,7 +574,7 @@ export default function GastosFijosPage() {
   const paidBills = bills.filter((e) => e.paid).sort((a, b) => sortDay(a) - sortDay(b));
   const billsTotal = bills.reduce((s, e) => s + (e.amount || 0), 0);
   const paidTotal = paidBills.reduce((s, e) => s + (e.amount || 0), 0);
-  const isCurrentMonth = monthId === getCurrentMonthId();
+  const isCurrentMonth = monthId === cycle.currentMonthId;
   const monthName = monthIdToLabel(monthId).split(' ')[0];
 
   const sheetExpense = sheet?.id ? expenses.find((e) => e.id === sheet.id) ?? null : null;

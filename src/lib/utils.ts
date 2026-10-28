@@ -26,19 +26,20 @@ export function todayISO() {
   return toISODate(new Date());
 }
 
-// Fecha por defecto para registrar algo en un mes: hoy si es el mes actual; si
-// no, el último día del mes (pasado) o el primero (futuro), para que la fecha
-// nunca caiga fuera del mes que se está viendo.
-export function defaultDateForMonth(monthId: string) {
-  const current = getCurrentMonthId();
-  if (monthId === current) return todayISO();
-  const [year, month] = monthId.split('-').map(Number);
-  return monthId < current ? toISODate(new Date(year, month, 0)) : `${monthId}-01`;
+// Suma días a una fecha ISO ("2026-10-23" + 1 = "2026-10-24"), en hora local.
+export function addDays(iso: string, days: number) {
+  const [year, month, day] = iso.split('-').map(Number);
+  return toISODate(new Date(year, month - 1, day + days));
 }
 
-export function monthBounds(monthId: string) {
-  const [year, month] = monthId.split('-').map(Number);
-  return { min: `${monthId}-01`, max: toISODate(new Date(year, month, 0)) };
+// Fecha por defecto para registrar algo en un ciclo: hoy si cae dentro; si el
+// ciclo ya pasó, su último día; si aún no empieza, el primero. Así la fecha nunca
+// queda fuera del ciclo que se está viendo.
+export function defaultDateForCycle({ min, max }: { min: string; max: string | null }) {
+  const today = todayISO();
+  if (today < min) return min;
+  if (max !== null && today > max) return max;
+  return today;
 }
 
 const WEEKDAYS = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
