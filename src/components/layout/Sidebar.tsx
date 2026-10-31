@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { LayoutDashboard, Receipt, List, PiggyBank, History, User, LogOut } from 'lucide-react';
 import { getSupabase } from '@/lib/supabase';
+import { ThemeButton } from '@/components/ui/ThemeButton';
 
 const nav = [
   { href: '/dashboard', label: 'Resumen', icon: LayoutDashboard },
@@ -56,6 +57,7 @@ export function Sidebar() {
           <User size={17} />
           Perfil
         </Link>
+        <ThemeButton variant="row" />
         <button
           onClick={() => getSupabase().auth.signOut()}
           className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm text-stone-500 dark:text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 hover:bg-stone-50 dark:hover:bg-stone-800 w-full transition-colors"

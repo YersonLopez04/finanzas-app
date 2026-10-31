@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/Button';
 import { User, Download, Upload, LogOut, Bell, BellOff } from 'lucide-react';
 import { DataError } from '@/lib/db';
 import { reportError } from '@/components/ui/ErrorToast';
+import { ThemeSelector } from '@/components/ui/ThemeButton';
 
 export default function PerfilPage() {
   const { user } = useAuth();
@@ -83,6 +84,15 @@ export default function PerfilPage() {
         </CardHeader>
         <CardBody>
           <p className="text-sm text-stone-600 dark:text-stone-300">{user?.email}</p>
+        </CardBody>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <p className="text-sm font-semibold text-stone-700 dark:text-stone-200">Apariencia</p>
+        </CardHeader>
+        <CardBody>
+          <ThemeSelector />
         </CardBody>
       </Card>
 

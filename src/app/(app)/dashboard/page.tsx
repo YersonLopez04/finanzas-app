@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { reportError, LoadError } from '@/components/ui/ErrorToast';
 import { Select } from '@/components/ui/Select';
+import { ThemeButton } from '@/components/ui/ThemeButton';
 import type { MonthData, Income, SavingsAllocation, Transaction, Account } from '@/types';
 import { Plus, Trash2, Wallet, PiggyBank, PieChart, History, AlertCircle } from 'lucide-react';
 
@@ -168,7 +169,11 @@ export default function DashboardPage() {
             <History size={14} /> Historial
           </Link>
         </div>
-        <MonthPicker monthId={monthId} onChange={setMonthId} />
+        {/* En escritorio el botón vive en la barra lateral. */}
+        <ThemeButton className="md:hidden" />
+        <div className="flex w-full justify-end md:w-auto">
+          <MonthPicker monthId={monthId} onChange={setMonthId} />
+        </div>
       </div>
 
       {/* Hero: restante del mes */}

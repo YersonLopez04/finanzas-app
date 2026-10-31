@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Muestra: Modo día y noche</title>
+<style>
+  * { box-sizing: border-box; }
+  :root { --ease-out: cubic-bezier(0.23, 1, 0.32, 1); font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif; }
+  body { margin: 0; background: #DAE6EC; color: #011C40; }
+  .page { max-width: 1320px; margin: 0 auto; padding: 24px 16px 64px; }
+  h1.page-title { font-size: 22px; margin: 0 0 4px; }
+  .lead { margin: 0 0 16px; color: #3A6280; font-size: 14px; line-height: 1.5; max-width: 75ch; }
+  .seg-top { display: inline-flex; background: #C5D6DF; border-radius: 999px; padding: 3px; gap: 2px; margin-bottom: 20px; }
+  .seg-top button { border: 0; background: transparent; padding: 8px 16px; border-radius: 999px; font: inherit; font-size: 14px; font-weight: 600; color: #164E73; cursor: pointer; }
+  .seg-top button[aria-pressed="true"] { background: #fff; color: #011C40; box-shadow: 0 1px 2px rgba(1,28,64,.1); }
+  .stage { display: flex; flex-wrap: wrap; gap: 28px; justify-content: center; align-items: flex-start; }
+  .col { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  .col-label { font-size: 13px; font-weight: 700; color: #26658C; text-transform: uppercase; letter-spacing: .06em; }
+  .tag { display: inline-block; margin-left: 6px; padding: 2px 7px; border-radius: 999px; background: #011C40; color: #fff; font-size: 10.5px; letter-spacing: .04em; vertical-align: 1px; }
+  .col-note { font-size: 13px; color: #3A6280; max-width: 335px; text-align: center; line-height: 1.45; }
+
+  /* Paleta Luna: los mismos valores de globals.css */
+  .phone, .desk { background: var(--bg); color: var(--text); transition: background-color .3s ease, color .3s ease; }
+  .light { --bg: #EDF6F9; --card: #fff; --line: #ECF3F6; --line-2: #DAE6EC; --text: #164E73; --strong: #011C40; --muted: #4A6E85; --field: #F5FAFC; --hover: #F5FAFC; --icon-bg: #DDEFF5; --icon: #2F5D7C; --seg: #ECF3F6; --seg-on: #fff; --seg-on-text: #011C40; --glass: rgba(255,255,255,.72); --glass-line: rgba(1,28,64,.08); --toast: #011C40; --toast-text: #ECF3F6; --scrim: rgba(1,28,64,.3); }
+  .dark { --bg: #011C40; --card: #023859; --line: #164E73; --line-2: #164E73; --text: #ECF3F6; --strong: #ECF3F6; --muted: #A6BCC9; --field: #164E73; --hover: #164E73; --icon-bg: #164E73; --icon: #CFE3EC; --seg: #011C40; --seg-on: #164E73; --seg-on-text: #ECF3F6; --glass: rgba(2,56,89,.62); --glass-line: rgba(236,243,246,.1); --toast: #ECF3F6; --toast-text: #011C40; --scrim: rgba(0,0,0,.5); }
+
+  .phone { width: 375px; max-width: calc(100vw - 32px); height: 700px; border-radius: 44px; overflow: hidden; position: relative; border: 10px solid #011C40; box-shadow: 0 20px 50px rgba(1,28,64,.2); isolation: isolate; }
+  .status { height: 44px; display: flex; align-items: center; justify-content: space-between; padding: 0 26px; font-size: 14px; font-weight: 600; color: var(--strong); }
+  .scroll { position: absolute; inset: 44px 0 0; overflow: hidden; padding: 4px 16px; }
+  svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+
+  /* Cabecera del Resumen: hoy hace salto de línea a 375 px; el botón cierra la primera fila. */
+  .head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin: 6px 0 18px; }
+  .head-left { display: flex; align-items: center; gap: 10px; }
+  .head h2 { font-size: 18px; font-weight: 600; margin: 0; color: var(--strong); }
+  .chip { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); padding: 6px 10px; border-radius: 999px; }
+  .chip svg { width: 14px; height: 14px; }
+  .theme-btn { width: 40px; height: 40px; border-radius: 999px; border: 1px solid var(--line-2); background: var(--card); color: var(--icon); display: grid; place-items: center; cursor: pointer; padding: 0; transition: transform .16s var(--ease-out), background-color .3s ease, border-color .3s ease; }
+  .theme-btn:active { transform: scale(.94); }
+  .theme-btn svg { width: 18px; height: 18px; animation: spin-in .35s var(--ease-out); }
+  @keyframes spin-in { from { transform: rotate(-90deg) scale(.5); opacity: 0; } }
+  .month { width: 100%; display: flex; align-items: center; justify-content: flex-end; gap: 2px; }
+  .month .ib { width: 32px; height: 32px; display: grid; place-items: center; color: var(--muted); }
+  .month .label { text-align: center; min-width: 124px; line-height: 1.15; }
+  .month .label b { display: block; font-size: 14px; font-weight: 600; color: var(--strong); }
+  .month .label small { display: block; margin-top: 2px; font-size: 11.5px; color: var(--muted); }
+
+  .hero { position: relative; overflow: hidden; background: linear-gradient(135deg, #023859, #023859 50%, #26658C); color: #fff; border-radius: 24px; padding: 26px 24px 22px; }
+  .hero::after { content: ''; position: absolute; top: -40px; right: -40px; width: 176px; height: 176px; border-radius: 50%; background: rgba(255,255,255,.05); }
+  .hero .l { font-size: 12px; color: #CFE3EC; }
+  .hero .big { font-size: 36px; font-weight: 700; margin: 6px 0 18px; letter-spacing: -.02em; }
+  .hero .bar { height: 8px; border-radius: 99px; background: rgba(255,255,255,.15); overflow: hidden; }
+  .hero .bar i { display: block; height: 100%; width: 72%; background: #6ee7b7; border-radius: 99px; }
+  .hero .foot { display: flex; justify-content: space-between; margin-top: 6px; font-size: 11px; color: #CFE3EC; }
+  .ghost { margin-top: 16px; background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 16px; font-size: 13px; color: var(--muted); line-height: 1.45; }
+  .ghost b { display: block; color: var(--text); font-size: 14px; margin-bottom: 4px; }
+
+  .nav { position: absolute; left: 16px; right: 16px; bottom: 18px; height: 60px; border-radius: 999px; background: var(--glass); border: 1px solid var(--glass-line); backdrop-filter: blur(18px) saturate(1.4); -webkit-backdrop-filter: blur(18px) saturate(1.4); display: flex; align-items: center; justify-content: space-around; color: var(--muted); }
+  .nav .on { color: var(--strong); background: var(--icon-bg); width: 52px; height: 44px; border-radius: 999px; display: grid; place-items: center; }
+
+  /* Aviso al primer toque (solo C) */
+  .toast { position: absolute; left: 16px; right: 16px; bottom: 92px; background: var(--toast); color: var(--toast-text); border-radius: 16px; padding: 12px 14px; display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 13.5px; line-height: 1.35; box-shadow: 0 10px 30px rgba(1,28,64,.25); }
+  .toast a { color: inherit; font-weight: 700; text-decoration: none; white-space: nowrap; }
+
+  /* Perfil */
+  .ptitle { display: flex; align-items: center; gap: 10px; margin: 6px 0 22px; }
+  .ptitle .av { width: 32px; height: 32px; border-radius: 50%; background: var(--icon-bg); color: var(--icon); display: grid; place-items: center; }
+  .ptitle .av svg { width: 15px; height: 15px; }
+  .ptitle h2 { font-size: 18px; font-weight: 600; margin: 0; color: var(--strong); }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; margin-bottom: 20px; overflow: hidden; }
+  .card .ch { padding: 14px 16px; border-bottom: 1px solid var(--line); font-size: 14px; font-weight: 600; color: var(--text); }
+  .card .cb { padding: 14px 16px; font-size: 14px; color: var(--muted); line-height: 1.45; }
+  .seg { display: grid; grid-template-columns: repeat(3, 1fr); background: var(--seg); border: 1px solid var(--line-2); border-radius: 12px; padding: 3px; gap: 2px; }
+  .seg button { border: 0; background: transparent; border-radius: 9px; min-height: 40px; font: inherit; font-size: 13.5px; font-weight: 600; color: var(--muted); cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; }
+  .seg button svg { width: 15px; height: 15px; }
+  .seg button[aria-pressed="true"] { background: var(--seg-on); color: var(--seg-on-text); box-shadow: 0 1px 2px rgba(1,28,64,.12); }
+  .hint { margin: 10px 2px 0; font-size: 12.5px; color: var(--muted); }
+
+  /* Escritorio: pie de la barra lateral */
+  .desk { width: 300px; border-radius: 18px; overflow: hidden; border: 1px solid rgba(1,28,64,.15); box-shadow: 0 20px 50px rgba(1,28,64,.15); display: flex; }
+  .side { width: 240px; background: var(--card); border-right: 1px solid var(--line); padding: 12px; display: flex; flex-direction: column; gap: 4px; }
+  .side .fade { height: 120px; border-radius: 12px; background: linear-gradient(to bottom, transparent, var(--hover)); margin-bottom: 8px; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 8px; font-size: 11px; color: var(--muted); }
+  .side .item { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 12px; font-size: 14px; color: var(--muted); border: 0; background: transparent; font: inherit; text-align: left; cursor: pointer; }
+  .side .item svg { width: 17px; height: 17px; stroke-width: 1.8; }
+  .side .item.hl { background: var(--hover); color: var(--strong); }
+  .side .item small { margin-left: auto; font-size: 11.5px; color: var(--muted); }
+  .rest { flex: 1; background: var(--bg); }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1 class="page-title">Modo día y noche</h1>
+  <p class="lead">Un botón de sol y luna como en LUNA, en la cabecera del Resumen y al pie de la barra lateral en escritorio. Muestra el ícono del modo al que vas a cambiar: de día una luna, de noche un sol. Mientras no lo toques, la app sigue el modo de tu teléfono, como ahora. <b>A</b> es solo el botón. <b>C</b> le suma un aviso al primer toque y la opción "Automático" en Perfil para volver a seguir al teléfono. Toca el botón del primer teléfono para probarlo.</p>
+  <div class="seg-top" role="group" aria-label="Tema de la muestra">
+    <button type="button" aria-pressed="true" data-theme="light">Día</button>
+    <button type="button" aria-pressed="false" data-theme="dark">Noche</button>
+  </div>
+
+  <div class="stage">
+    <!-- ① Botón en Resumen (A y C) -->
+    <div class="col">
+      <div class="col-label">① Botón en Resumen <span class="tag">A y C</span></div>
+      <div class="phone light" data-follow>
+        <div class="status"><span>9:41</span><span>●●●</span></div>
+        <div class="scroll">
+          <div class="head">
+            <div class="head-left"><h2>Resumen</h2><span class="chip"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l4 2"/></svg>Historial</span></div>
+            <button class="theme-btn" type="button" aria-label="Cambiar a modo noche" data-toggle></button>
+            <div class="month"><span class="ib"><svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg></span><span class="label"><b>Noviembre 2026</b><small>desde 23 oct</small></span><span class="ib"><svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></span></div>
+          </div>
+          <div class="hero"><div class="l">Restante este mes</div><div class="big">S/ 1,640.00</div><div class="bar"><i></i></div><div class="foot"><span>Usado: S/ 260.00</span><span>Total: S/ 1,900.00</span></div></div>
+          <div class="ghost"><b>Ahorros</b>…el resto de la pantalla sigue igual.</div>
+        </div>
+        <div class="nav"><span class="on"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg></span><svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg><svg viewBox="0 0 24 24"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/></svg><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></div>
+      </div>
+      <div class="col-note">Círculo de 40 px a la derecha del título; el mes baja a la segunda fila, que en el teléfono ya pasa hoy. Un toque cambia todo al instante y el ícono gira al entrar.</div>
+    </div>
+
+    <!-- ② Primer toque (C) -->
+    <div class="col">
+      <div class="col-label">② Primer toque <span class="tag">C</span></div>
+      <div class="phone dark" data-invert>
+        <div class="status"><span>9:41</span><span>●●●</span></div>
+        <div class="scroll">
+          <div class="head">
+            <div class="head-left"><h2>Resumen</h2><span class="chip"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l4 2"/></svg>Historial</span></div>
+            <button class="theme-btn" type="button" aria-label="Cambiar a modo día" data-icon></button>
+            <div class="month"><span class="ib"><svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg></span><span class="label"><b>Noviembre 2026</b><small>desde 23 oct</small></span><span class="ib"><svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></span></div>
+          </div>
+          <div class="hero"><div class="l">Restante este mes</div><div class="big">S/ 1,640.00</div><div class="bar"><i></i></div><div class="foot"><span>Usado: S/ 260.00</span><span>Total: S/ 1,900.00</span></div></div>
+        </div>
+        <div class="toast"><span data-toast-text>Modo noche fijo. Ya no sigue al teléfono.</span><a href="#">Perfil</a></div>
+        <div class="nav"><span class="on"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg></span><svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg><svg viewBox="0 0 24 24"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/></svg><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></div>
+      </div>
+      <div class="col-note">Solo la primera vez que lo tocas: un aviso de 4 segundos explica que la app dejó de seguir al teléfono y lleva a Perfil. Así nunca te quedas "atrapado" en un modo. Este teléfono muestra el modo contrario al de arriba, como pasa justo después del toque.</div>
+    </div>
+
+    <!-- ③ Perfil (C) -->
+    <div class="col">
+      <div class="col-label">③ Perfil → Apariencia <span class="tag">C</span></div>
+      <div class="phone light" data-follow>
+        <div class="status"><span>9:41</span><span>●●●</span></div>
+        <div class="scroll">
+          <div class="ptitle"><span class="av"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></span><h2>Perfil</h2></div>
+          <div class="card"><div class="ch">Cuenta</div><div class="cb">tucorreo@gmail.com</div></div>
+          <div class="card"><div class="ch">Apariencia</div><div class="cb">
+            <div class="seg" role="group" aria-label="Apariencia" data-seg>
+              <button type="button" aria-pressed="true" data-mode="auto"><svg viewBox="0 0 24 24"><rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M11 18h2"/></svg>Automático</button>
+              <button type="button" aria-pressed="false" data-mode="light"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>Día</button>
+              <button type="button" aria-pressed="false" data-mode="dark"><svg viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>Noche</button>
+            </div>
+            <p class="hint" data-hint>Sigue el modo de tu teléfono.</p>
+          </div></div>
+          <div class="card"><div class="ch">Notificaciones</div><div class="cb">Activadas: te avisamos un día antes y el mismo día que vence un gasto fijo.</div></div>
+        </div>
+        <div class="nav"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg><svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg><svg viewBox="0 0 24 24"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/></svg><span class="on"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></span></div>
+      </div>
+      <div class="col-note">Una tarjeta nueva debajo de Cuenta. Va sincronizada con el botón: si tocas el sol o la luna, aquí se marca Día o Noche. "Automático" vuelve a seguir al teléfono.</div>
+    </div>
+
+    <!-- ④ Escritorio (A y C) -->
+    <div class="col">
+      <div class="col-label">④ Escritorio <span class="tag">A y C</span></div>
+      <div class="desk light" data-follow>
+        <div class="side">
+          <div class="fade">Resumen · Gastos fijos · …</div>
+          <div class="item"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>Perfil</div>
+          <button class="item hl" type="button" data-side-toggle></button>
+          <div class="item"><svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>Salir</div>
+        </div>
+        <div class="rest"></div>
+      </div>
+      <div class="col-note">En escritorio la cabecera del Resumen no lleva el botón: va al pie de la barra lateral, entre Perfil y Salir, con su nombre escrito.</div>
+    </div>
+  </div>
+</div>
+<script>
+  const SUN = '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>';
+  const MOON = '<svg viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>';
+  let base = 'light';   // lo que dice el teléfono (selector de arriba)
+  let mode = 'auto';    // auto | light | dark
+  const theme = () => (mode === 'auto' ? base : mode);
+  const other = (t) => (t === 'light' ? 'dark' : 'light');
+
+  function render() {
+    const t = theme();
+    document.querySelectorAll('[data-follow]').forEach((el) => { el.classList.remove('light', 'dark'); el.classList.add(t); });
+    document.querySelectorAll('[data-invert]').forEach((el) => { el.classList.remove('light', 'dark'); el.classList.add(other(t)); });
+    document.querySelectorAll('[data-toggle]').forEach((b) => {
+      b.innerHTML = t === 'light' ? MOON : SUN;
+      b.setAttribute('aria-label', t === 'light' ? 'Cambiar a modo noche' : 'Cambiar a modo día');
+    });
+    document.querySelectorAll('[data-icon]').forEach((b) => { b.innerHTML = other(t) === 'light' ? MOON : SUN; });
+    document.querySelectorAll('[data-toast-text]').forEach((s) => { s.textContent = `Modo ${other(t) === 'light' ? 'día' : 'noche'} fijo. Ya no sigue al teléfono.`; });
+    document.querySelectorAll('[data-side-toggle]').forEach((b) => { b.innerHTML = (t === 'light' ? MOON + 'Modo noche' : SUN + 'Modo día') + (mode === 'auto' ? '<small>auto</small>' : ''); });
+    document.querySelectorAll('[data-seg] button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.mode === mode)));
+    document.querySelectorAll('[data-hint]').forEach((p) => { p.textContent = mode === 'auto' ? 'Sigue el modo de tu teléfono.' : `Siempre en modo ${mode === 'light' ? 'día' : 'noche'}, sin importar el teléfono.`; });
+  }
+
+  document.querySelectorAll('.seg-top button').forEach((b) => b.addEventListener('click', () => {
+    document.querySelectorAll('.seg-top button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+    base = b.dataset.theme;
+    render();
+  }));
+  document.querySelectorAll('[data-toggle], [data-side-toggle]').forEach((b) => b.addEventListener('click', () => { mode = other(theme()); render(); }));
+  document.querySelectorAll('[data-seg] button').forEach((b) => b.addEventListener('click', () => { mode = b.dataset.mode; render(); }));
+  render();
+</script>
+</body>
+</html>

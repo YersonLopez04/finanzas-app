@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+/* El modo noche lo decide data-theme en <html> (src/lib/theme.ts), no el teléfono directo:
+   así se puede fijar día o noche desde la app. */
+@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
+
 /* Paleta Luna (marino y aqua). Las escalas stone y slate de Tailwind se
    redefinen aquí, así toda la app cambia de color desde un solo lugar.
    Noche: 950 fondo · 900 tarjeta · 800 borde/campo · 100-400 texto.
@@ -46,14 +50,12 @@
   --fresh: var(--color-emerald-50);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #011C40;
-    --foreground: #ECF3F6;
-    --paid: var(--color-emerald-300);
-    --paid-ink: var(--color-emerald-950);
-    --fresh: color-mix(in oklab, var(--color-emerald-500) 16%, transparent);
-  }
+:root[data-theme='dark'] {
+  --background: #011C40;
+  --foreground: #ECF3F6;
+  --paid: var(--color-emerald-300);
+  --paid-ink: var(--color-emerald-950);
+  --fresh: color-mix(in oklab, var(--color-emerald-500) 16%, transparent);
 }
 
 html {
@@ -112,6 +114,18 @@ body {
 
 .motion-sheet {
   animation: sheet-in 420ms var(--ease-sheet) both;
+}
+
+/* Ícono del botón sol/luna al cambiar: gira y aparece, sin rebote. */
+@keyframes spin-in {
+  from {
+    opacity: 0;
+    transform: rotate(-90deg) scale(0.5);
+  }
+}
+
+.motion-spin-in {
+  animation: spin-in 350ms var(--ease-out) both;
 }
 
 .motion-fade {
@@ -280,27 +294,25 @@ body {
     inset 0 1px 0 rgba(255, 255, 255, 0.9);
 }
 
-@media (prefers-color-scheme: dark) {
-  .glass {
-    background: rgba(2, 56, 89, 0.5);
-    border-color: rgba(255, 255, 255, 0.16);
-    box-shadow:
-      0 14px 36px rgba(0, 0, 0, 0.5),
-      0 2px 6px rgba(0, 0, 0, 0.3),
-      inset 0 1px 0 rgba(255, 255, 255, 0.22),
-      inset 0 -1px 0 rgba(255, 255, 255, 0.05);
-  }
-  .glass::before {
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0) 46%);
-    mix-blend-mode: normal;
-  }
-  .glass-lens {
-    background: rgba(255, 255, 255, 0.16);
-    border-color: rgba(255, 255, 255, 0.28);
-    box-shadow:
-      0 3px 12px rgba(0, 0, 0, 0.3),
-      inset 0 1px 0 rgba(255, 255, 255, 0.3);
-  }
+[data-theme='dark'] .glass {
+  background: rgba(2, 56, 89, 0.5);
+  border-color: rgba(255, 255, 255, 0.16);
+  box-shadow:
+    0 14px 36px rgba(0, 0, 0, 0.5),
+    0 2px 6px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.05);
+}
+[data-theme='dark'] .glass::before {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0) 46%);
+  mix-blend-mode: normal;
+}
+[data-theme='dark'] .glass-lens {
+  background: rgba(255, 255, 255, 0.16);
+  border-color: rgba(255, 255, 255, 0.28);
+  box-shadow:
+    0 3px 12px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 
 /* Transparencia reducida: el vidrio se vuelve un panel sólido y legible. */
@@ -317,11 +329,11 @@ body {
     background: #DDEFF5;
   }
 }
-@media (prefers-reduced-transparency: reduce) and (prefers-color-scheme: dark) {
-  .glass {
+@media (prefers-reduced-transparency: reduce) {
+  [data-theme='dark'] .glass {
     background: #023859;
   }
-  .glass-lens {
+  [data-theme='dark'] .glass-lens {
     background: #164E73;
   }
 }
@@ -329,7 +341,8 @@ body {
 /* Movimiento reducido: sin deslizamientos ni resortes; solo cambios de opacidad. */
 @media (prefers-reduced-motion: reduce) {
   .motion-sheet,
-  .motion-pop {
+  .motion-pop,
+  .motion-spin-in {
     animation: fade-in 200ms ease-out both;
   }
   .glass-lens,
