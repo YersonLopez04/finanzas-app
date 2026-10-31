@@ -572,8 +572,12 @@ export default function GastosFijosPage() {
   const budgets = expenses.filter((e) => e.tracked);
   const toPay = bills.filter((e) => !e.paid).sort((a, b) => sortDay(a) - sortDay(b));
   const paidBills = bills.filter((e) => e.paid).sort((a, b) => sortDay(a) - sortDay(b));
-  const billsTotal = bills.reduce((s, e) => s + (e.amount || 0), 0);
-  const paidTotal = paidBills.reduce((s, e) => s + (e.amount || 0), 0);
+  // Los presupuestos (gasolina) cuentan con su monto completo; lo ya cargado
+  // cuenta como pagado, sin pasar del presupuesto.
+  const billsTotal = expenses.reduce((s, e) => s + (e.amount || 0), 0);
+  const paidTotal =
+    paidBills.reduce((s, e) => s + (e.amount || 0), 0) +
+    budgets.reduce((s, e) => s + Math.min(spentTotals[e.id] ?? 0, e.amount || 0), 0);
   const isCurrentMonth = monthId === cycle.currentMonthId;
   const monthName = monthIdToLabel(monthId).split(' ')[0];
 
@@ -620,7 +624,7 @@ export default function GastosFijosPage() {
 
       {expenses.length > 0 && (
         <div>
-          {bills.length > 0 && (
+          {billsTotal > 0 && (
             <div className="rounded-2xl bg-slate-800 px-5 py-4 text-slate-50">
               <p className="text-xs text-slate-300">{isCurrentMonth ? 'Por pagar este mes' : `Por pagar en ${monthName}`}</p>
               <p className="mb-2.5 mt-0.5 text-[32px] font-bold leading-tight tracking-tight tabular-nums">
@@ -634,9 +638,11 @@ export default function GastosFijosPage() {
               </div>
               <div className="mt-2 flex justify-between text-xs text-slate-300">
                 <span>Pagado {formatCurrency(paidTotal)}</span>
-                <span>
-                  {paidBills.length} de {bills.length} pagos
-                </span>
+                {bills.length > 0 && (
+                  <span>
+                    {paidBills.length} de {bills.length} pagos
+                  </span>
+                )}
               </div>
             </div>
           )}
