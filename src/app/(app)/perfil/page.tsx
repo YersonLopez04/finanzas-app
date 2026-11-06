@@ -2,19 +2,25 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/lib/auth-context';
+import { useCycle } from '@/lib/cycle-context';
 import { getSupabase } from '@/lib/supabase';
 import { exportAllData } from '@/lib/export';
 import { importAllData, type ImportSummary } from '@/lib/import';
 import { notificationsSupported, notificationsEnabled, requestNotificationPermission } from '@/lib/notifications';
 import { Card, CardBody, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { Select } from '@/components/ui/Select';
 import { User, Download, Upload, LogOut, Bell, BellOff } from 'lucide-react';
 import { DataError } from '@/lib/db';
 import { reportError } from '@/components/ui/ErrorToast';
 import { ThemeSelector } from '@/components/ui/ThemeButton';
 
+const PAY_DAY_OPTIONS = Array.from({ length: 31 }, (_, i) => ({ value: String(i + 1), label: `Día ${i + 1}` }));
+
 export default function PerfilPage() {
   const { user } = useAuth();
+  const { payDay, changePayDay } = useCycle();
+  const [savingPayDay, setSavingPayDay] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [notifEnabled, setNotifEnabled] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -29,6 +35,17 @@ export default function PerfilPage() {
   async function handleEnableNotifications() {
     const granted = await requestNotificationPermission();
     setNotifEnabled(granted);
+  }
+
+  async function handlePayDayChange(day: number) {
+    setSavingPayDay(true);
+    try {
+      await changePayDay(day);
+    } catch (err) {
+      reportError(err);
+    } finally {
+      setSavingPayDay(false);
+    }
   }
 
   async function handleExport() {
@@ -84,6 +101,25 @@ export default function PerfilPage() {
         </CardHeader>
         <CardBody>
           <p className="text-sm text-stone-600 dark:text-stone-300">{user?.email}</p>
+        </CardBody>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <p className="text-sm font-semibold text-stone-700 dark:text-stone-200">Día de cobro</p>
+        </CardHeader>
+        <CardBody className="flex flex-col gap-3">
+          <p className="text-sm text-stone-500 dark:text-stone-400">
+            Tu mes empieza el día que cobras. Si ese día cae en fin de semana o feriado, te lo proponemos el día hábil anterior. Los ciclos que ya empezaron no cambian.
+          </p>
+          <Select
+            aria-label="Día de cobro"
+            options={PAY_DAY_OPTIONS}
+            value={String(payDay)}
+            disabled={savingPayDay}
+            onChange={(e) => handlePayDayChange(Number(e.target.value))}
+            className="max-w-40"
+          />
         </CardBody>
       </Card>
 

@@ -1,6 +1,7 @@
 import { getSupabase } from './supabase';
 import type { MonthData, Transaction, Account, AccountMovement, Category, FixedExpenseEntry } from '@/types';
 import { DEFAULT_CATEGORIES } from '@/types';
+import { DEFAULT_PAY_DAY } from './cycle';
 
 const DEMO_MODE = !process.env.NEXT_PUBLIC_SUPABASE_URL;
 
@@ -218,6 +219,27 @@ export async function getCycleStarts(userId: string): Promise<Record<string, str
     'cargar los ciclos de cobro'
   );
   return Object.fromEntries(((data ?? []) as { id: string; start_date: string }[]).map((m) => [m.id, m.start_date]));
+}
+
+// Día de cobro de la persona. Vive en los metadatos de su cuenta: la sigue en
+// todos sus aparatos y no necesita tabla propia.
+let demoPayDay = DEFAULT_PAY_DAY;
+
+export async function getPayDay(): Promise<number> {
+  if (DEMO_MODE) return demoPayDay;
+  const { data, error } = await sb().auth.getUser();
+  if (error) check({ data: null, error }, 'cargar tu día de cobro');
+  const day = Number(data.user?.user_metadata?.pay_day);
+  return Number.isInteger(day) && day >= 1 && day <= 31 ? day : DEFAULT_PAY_DAY;
+}
+
+export async function savePayDay(day: number) {
+  if (DEMO_MODE) {
+    demoPayDay = day;
+    return;
+  }
+  const { error } = await sb().auth.updateUser({ data: { pay_day: day } });
+  if (error) check({ data: null, error }, 'guardar tu día de cobro');
 }
 
 // Confirma el inicio de un ciclo. Los gastos del ciclo anterior con fecha desde

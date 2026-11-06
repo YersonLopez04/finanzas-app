@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { getCycleStarts, startCycle } from './db';
+import { getCycleStarts, getPayDay, savePayDay, startCycle } from './db';
 import { currentCycleId, cycleBounds, pendingCycle, type CycleBounds, type CycleStarts, type PendingCycle } from './cycle';
 import { todayISO } from './utils';
 import { LoadError } from '@/components/ui/ErrorToast';
@@ -12,6 +12,9 @@ interface CycleValue {
   pending: PendingCycle | null;
   // Confirma el día real de cobro con el que empieza el ciclo pendiente.
   confirmStart: (startDate: string) => Promise<void>;
+  payDay: number;
+  // Cambia el día de cobro previsto. Los ciclos ya confirmados no se tocan.
+  changePayDay: (day: number) => Promise<void>;
 }
 
 const CycleContext = createContext<CycleValue | null>(null);
@@ -28,12 +31,18 @@ export function useCycle() {
 // cada pantalla arranque de nuevo en él.
 export function CycleProvider({ userId, children }: { userId: string; children: (version: number) => React.ReactNode }) {
   const [starts, setStarts] = useState<CycleStarts | null>(null);
+  const [payDay, setPayDay] = useState<number | null>(null);
   const [loadError, setLoadError] = useState<unknown>(null);
   const [today, setToday] = useState(todayISO());
   const [version, setVersion] = useState(0);
 
   useEffect(() => {
-    getCycleStarts(userId).then(setStarts).catch(setLoadError);
+    Promise.all([getCycleStarts(userId), getPayDay()])
+      .then(([loadedStarts, loadedPayDay]) => {
+        setStarts(loadedStarts);
+        setPayDay(loadedPayDay);
+      })
+      .catch(setLoadError);
   }, [userId]);
 
   // Si la app queda abierta de un día para otro, el ciclo se recalcula al volver.
@@ -45,25 +54,32 @@ export function CycleProvider({ userId, children }: { userId: string; children: 
 
   const confirmStart = useCallback(
     async (startDate: string) => {
-      if (!starts) return;
-      const pending = pendingCycle(starts, todayISO());
+      if (!starts || payDay === null) return;
+      const pending = pendingCycle(starts, todayISO(), payDay);
       if (!pending) return;
       await startCycle(userId, pending.monthId, startDate, pending.previousMonthId);
       setStarts({ ...starts, [pending.monthId]: startDate });
       setVersion((v) => v + 1);
     },
-    [userId, starts]
+    [userId, starts, payDay]
   );
 
+  const changePayDay = useCallback(async (day: number) => {
+    await savePayDay(day);
+    setPayDay(day);
+  }, []);
+
   const value = useMemo<CycleValue | null>(() => {
-    if (!starts) return null;
+    if (!starts || payDay === null) return null;
     return {
-      currentMonthId: currentCycleId(starts, today),
-      boundsOf: (monthId) => cycleBounds(monthId, starts, today),
-      pending: pendingCycle(starts, today),
+      currentMonthId: currentCycleId(starts, today, payDay),
+      boundsOf: (monthId) => cycleBounds(monthId, starts, today, payDay),
+      pending: pendingCycle(starts, today, payDay),
       confirmStart,
+      payDay,
+      changePayDay,
     };
-  }, [starts, today, confirmStart]);
+  }, [starts, payDay, today, confirmStart, changePayDay]);
 
   if (loadError) return <LoadError error={loadError} />;
   if (!value) return null;
