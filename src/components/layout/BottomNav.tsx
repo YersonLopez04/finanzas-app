@@ -6,28 +6,16 @@ import { usePathname, useRouter } from 'next/navigation';
 import { onQuickAddState, requestQuickAddClose, requestQuickAddOpen } from '@/lib/quickAdd';
 import { LayoutDashboard, Receipt, List, PiggyBank, Plus } from 'lucide-react';
 
-const leftNav = [
+// La barra tiene 4 columnas iguales, una por pestaña; la lente de vidrio se desliza hasta ellas.
+// El + es una acción, no una pestaña: vive afuera, a la derecha de la barra.
+// Como en iPhone, la lente también se arrastra con el dedo y al soltar va a la pestaña más cercana.
+const tabs = [
   { href: '/dashboard', label: 'Resumen', icon: LayoutDashboard },
   { href: '/gastos-fijos', label: 'Fijos', icon: List },
-];
-
-const rightNav = [
   { href: '/gastos-variables', label: 'Variables', icon: Receipt },
   { href: '/ahorros', label: 'Ahorros', icon: PiggyBank },
 ];
-
-// La barra tiene 5 columnas iguales: cuatro pestañas y el + en el centro.
-// `slot` es la columna de cada pestaña; la lente de vidrio se desliza hasta ella.
-// Como en iPhone, la lente también se arrastra con el dedo y al soltar va a la pestaña más cercana.
-const slotHrefs = ['/dashboard', '/gastos-fijos', null, '/gastos-variables', '/ahorros'];
 const DRAG_START_PX = 8;
-
-// Columna más cercana a la lente; la del + no cuenta.
-function nearestSlot(left: number, slotWidth: number) {
-  const pos = left / slotWidth;
-  const slot = Math.round(pos);
-  return slot === 2 ? (pos < 2 ? 1 : 3) : slot;
-}
 
 function NavLink({
   href,
@@ -83,22 +71,20 @@ export function BottomNav() {
     else router.push('/gastos-variables?quick=1');
   }
 
-  // Columna de la pestaña activa (la 2 es el +). Sin pestaña activa (Perfil), la lente se oculta.
-  const items = [...leftNav, ...rightNav];
-  const slots = [0, 1, 3, 4];
-  const activeIndex = items.findIndex((item) => pathname.startsWith(item.href));
+  // Columna de la pestaña activa. Sin pestaña activa (Perfil), la lente se oculta.
+  const activeIndex = tabs.findIndex((item) => pathname.startsWith(item.href));
   const releasedSlot = released && released.from === pathname ? released.slot : null;
-  const lensSlot = releasedSlot ?? (activeIndex >= 0 ? slots[activeIndex] : 0);
+  const lensSlot = releasedSlot ?? Math.max(activeIndex, 0);
 
   function lensLeftAt(clientX: number) {
     const rect = navRef.current!.getBoundingClientRect();
-    const slotWidth = rect.width / 5;
+    const slotWidth = rect.width / tabs.length;
     return { left: Math.min(Math.max(clientX - rect.left - slotWidth / 2, 0), rect.width - slotWidth), slotWidth };
   }
 
   function handlePointerDown(e: React.PointerEvent<HTMLElement>) {
     suppressClick.current = false;
-    if (e.button > 0 || (e.target as HTMLElement).closest('button')) return;
+    if (e.button > 0) return;
     drag.current = { id: e.pointerId, startX: e.clientX, active: false, lastX: e.clientX, lastT: e.timeStamp };
   }
 
@@ -118,7 +104,7 @@ export function BottomNav() {
     d.lastT = e.timeStamp;
     const { left, slotWidth } = lensLeftAt(e.clientX);
     setDragLeft(left);
-    setDragSlot(nearestSlot(left, slotWidth));
+    setDragSlot(Math.round(left / slotWidth));
     setStretch(Math.min(velocity * 0.12, 0.22));
   }
 
@@ -132,10 +118,10 @@ export function BottomNav() {
     setStretch(0);
     if (e.type === 'pointercancel') return;
     const { left, slotWidth } = lensLeftAt(e.clientX);
-    const slot = nearestSlot(left, slotWidth);
-    const href = slotHrefs[slot];
+    const slot = Math.round(left / slotWidth);
+    const { href } = tabs[slot];
     setReleased({ slot, from: pathname });
-    if (href && !pathname.startsWith(href)) router.push(href);
+    if (!pathname.startsWith(href)) router.push(href);
   }
 
   const dragging = dragLeft !== null;
@@ -143,60 +129,57 @@ export function BottomNav() {
   const lensVisible = dragging || releasedSlot !== null || activeIndex >= 0;
 
   return (
-    <nav
-      aria-label="Principal"
-      ref={navRef}
-      onPointerDown={handlePointerDown}
-      onPointerMove={handlePointerMove}
-      onPointerUp={handlePointerEnd}
-      onPointerCancel={handlePointerEnd}
-      onClickCapture={(e) => {
-        // Soltar después de arrastrar no cuenta como toque en la pestaña de abajo.
-        if (!suppressClick.current) return;
-        suppressClick.current = false;
-        e.preventDefault();
-        e.stopPropagation();
-      }}
-      className="glass fixed inset-x-3 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-50 grid h-16 touch-none grid-cols-5 items-stretch rounded-[2rem] select-none md:hidden"
-    >
-      {/* Lente: el cristal del botón activo. Resorte crítico (sin rebote): llega suave y se puede redirigir a mitad de camino.
-          Al arrastrar sigue al dedo sin transición, crece como una gota y se estira con la velocidad. */}
-      <div
-        aria-hidden="true"
-        className={`nav-lens pointer-events-none absolute inset-y-1.5 left-0 w-1/5 p-0.5 ${
-          dragging ? 'transition-opacity' : 'transition-[transform,opacity] duration-[420ms] [transition-timing-function:var(--ease-sheet)]'
-        }`}
-        style={{
-          transform: dragging ? `translateX(${dragLeft}px)` : `translateX(${lensSlot * 100}%)`,
-          opacity: lensVisible ? 1 : 0,
+    <div className="pointer-events-none fixed inset-x-3 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-50 flex items-center gap-2 md:hidden">
+      <nav
+        aria-label="Principal"
+        ref={navRef}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerEnd}
+        onPointerCancel={handlePointerEnd}
+        onClickCapture={(e) => {
+          // Soltar después de arrastrar no cuenta como toque en la pestaña de abajo.
+          if (!suppressClick.current) return;
+          suppressClick.current = false;
+          e.preventDefault();
+          e.stopPropagation();
         }}
+        className="glass pointer-events-auto relative grid h-16 min-w-0 flex-1 touch-none grid-cols-4 items-stretch rounded-[2rem] select-none"
       >
+        {/* Lente: el cristal del botón activo. Resorte crítico (sin rebote): llega suave y se puede redirigir a mitad de camino.
+            Al arrastrar sigue al dedo sin transición, crece como una gota y se estira con la velocidad. */}
         <div
-          className="glass-lens h-full w-full rounded-full transition-transform duration-200 ease-out"
-          style={{ transform: dragging ? `scale(${1.12 + stretch}, ${1.12 - stretch * 0.5})` : undefined }}
-        />
-      </div>
-
-      {leftNav.map((item, i) => (
-        <NavLink key={item.href} {...item} active={pathname.startsWith(item.href)} lit={lensVisible && litSlot === slots[i]} />
-      ))}
-      <div className="relative z-10 flex items-center justify-center">
-        <button
-          type="button"
-          onClick={handleQuickAdd}
-          aria-label={quickOpen ? 'Cerrar registro de gasto' : 'Registrar gasto'}
-          className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-800 text-white shadow-[0_6px_16px_rgba(1,28,64,0.35),inset_0_1px_0_rgba(255,255,255,0.28)] transition-transform duration-150 ease-out active:scale-90 dark:bg-slate-200 dark:text-slate-900"
+          aria-hidden="true"
+          className={`nav-lens pointer-events-none absolute inset-y-1.5 left-0 w-1/4 p-0.5 ${
+            dragging ? 'transition-opacity' : 'transition-[transform,opacity] duration-[420ms] [transition-timing-function:var(--ease-sheet)]'
+          }`}
+          style={{
+            transform: dragging ? `translateX(${dragLeft}px)` : `translateX(${lensSlot * 100}%)`,
+            opacity: lensVisible ? 1 : 0,
+          }}
         >
-          <Plus
-            size={22}
-            strokeWidth={2.5}
-            className={`transition-transform duration-[380ms] [transition-timing-function:var(--spring)] ${quickOpen ? 'rotate-45' : ''}`}
+          <div
+            className="glass-lens h-full w-full rounded-full transition-transform duration-200 ease-out"
+            style={{ transform: dragging ? `scale(${1.12 + stretch}, ${1.12 - stretch * 0.5})` : undefined }}
           />
-        </button>
-      </div>
-      {rightNav.map((item, i) => (
-        <NavLink key={item.href} {...item} active={pathname.startsWith(item.href)} lit={lensVisible && litSlot === slots[i + 2]} />
-      ))}
-    </nav>
+        </div>
+
+        {tabs.map((item, i) => (
+          <NavLink key={item.href} {...item} active={pathname.startsWith(item.href)} lit={lensVisible && litSlot === i} />
+        ))}
+      </nav>
+      <button
+        type="button"
+        onClick={handleQuickAdd}
+        aria-label={quickOpen ? 'Cerrar registro de gasto' : 'Registrar gasto'}
+        className="pointer-events-auto flex h-13 w-13 flex-none items-center justify-center rounded-full bg-slate-800 text-white shadow-[0_6px_16px_rgba(1,28,64,0.35),inset_0_1px_0_rgba(255,255,255,0.28)] transition-transform duration-150 ease-out active:scale-90 dark:bg-slate-200 dark:text-slate-900 dark:shadow-[0_6px_16px_rgba(0,0,0,0.4)]"
+      >
+        <Plus
+          size={22}
+          strokeWidth={2.5}
+          className={`transition-transform duration-[380ms] [transition-timing-function:var(--spring)] ${quickOpen ? 'rotate-45' : ''}`}
+        />
+      </button>
+    </div>
   );
 }

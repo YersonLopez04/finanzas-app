@@ -49,7 +49,7 @@ export function ThemeButton({ variant = 'icon', className = '' }: { variant?: 'i
           type="button"
           onClick={toggle}
           aria-label={`Cambiar a ${label.toLowerCase()}`}
-          className={`relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-stone-200 bg-white text-slate-600 transition-transform duration-150 ease-out after:absolute after:-inset-1.5 active:scale-90 dark:border-stone-800 dark:bg-stone-900 dark:text-slate-300 ${className}`}
+          className={`relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-stone-200 bg-white text-slate-600 transition-transform duration-150 ease-out after:absolute after:-inset-1.5 active:scale-90 dark:border-stone-700 dark:bg-stone-900 dark:text-slate-300 ${className}`}
         >
           <Icon key={next} size={15} strokeWidth={2} className="motion-spin-in" />
         </button>
@@ -98,7 +98,7 @@ export function ThemeSelector() {
 
   return (
     <div className="flex flex-col gap-2.5">
-      <div role="group" aria-label="Apariencia" className="grid grid-cols-3 gap-0.5 rounded-xl border border-stone-200 bg-stone-100 p-[3px] dark:border-stone-800 dark:bg-stone-950">
+      <div role="group" aria-label="Apariencia" className="grid grid-cols-3 gap-0.5 rounded-xl border border-stone-200 bg-stone-100 p-[3px] dark:border-stone-700 dark:bg-stone-950">
         {options.map((o) => (
           <button
             key={o.mode}

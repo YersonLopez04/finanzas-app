@@ -4,12 +4,10 @@
    así se puede fijar día o noche desde la app. */
 @custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
 
-/* Paleta Luna (marino y aqua). Las escalas stone y slate de Tailwind se
+/* Paleta Luna del modo día (marino y aqua). Las escalas stone y slate de Tailwind se
    redefinen aquí, así toda la app cambia de color desde un solo lugar.
-   Noche: 950 fondo · 900 tarjeta · 800 borde/campo · 100-400 texto.
    Día: 50-200 fondos y bordes · 500-900 texto.
-   El texto de noche es casi blanco (100, 200) y gris azulado claro (300, 400):
-   nunca un celeste saturado, que se pierde sobre el azul. */
+   La noche redefine estas escalas más abajo, en :root[data-theme='dark']. */
 @theme {
   --color-stone-50: #F5FAFC;
   --color-stone-100: #ECF3F6;
@@ -50,9 +48,47 @@
   --fresh: var(--color-emerald-50);
 }
 
+/* Noche pizarra: gris azulado apagado con un solo acento, el azul acero (slate-200 y
+   slate-400). Se redefine solo aquí para que el día siga con la paleta Luna.
+   stone: 950 fondo · 900 tarjeta · 800 divisor y campo · 700 borde · 100-400 texto.
+   sky también pasa a acero: de noche no queda ningún celeste. */
 :root[data-theme='dark'] {
-  --background: #011C40;
-  --foreground: #ECF3F6;
+  --color-stone-50: #F5F6F8;
+  --color-stone-100: #EDEFF2;
+  --color-stone-200: #DDE1E6;
+  --color-stone-300: #C3CBD6;
+  --color-stone-400: #A3ACB8;
+  --color-stone-500: #7C8694;
+  --color-stone-600: #5A6472;
+  --color-stone-700: #3D4757;
+  --color-stone-800: #2E3642;
+  --color-stone-900: #1C222B;
+  --color-stone-950: #14181F;
+
+  --color-slate-50: #F2F5F9;
+  --color-slate-100: #E2E9F1;
+  --color-slate-200: #9FB6D1;
+  --color-slate-300: #C3CBD6;
+  --color-slate-400: #9FB6D1;
+  --color-slate-500: #5F6B7A;
+  --color-slate-600: #4E5C6E;
+  --color-slate-700: #364354;
+  --color-slate-800: #242C38;
+  --color-slate-900: #14181F;
+
+  --color-sky-50: #EEF2F7;
+  --color-sky-100: #DCE5EF;
+  --color-sky-200: #C7D5E5;
+  --color-sky-300: #B4C7DE;
+  --color-sky-400: #9FB6D1;
+  --color-sky-500: #8AA5C6;
+  --color-sky-600: #5F7896;
+  --color-sky-700: #3F5A78;
+  --color-sky-800: #2F445C;
+  --color-sky-900: #233347;
+
+  --background: #14181F;
+  --foreground: #EDEFF2;
   --paid: var(--color-emerald-300);
   --paid-ink: var(--color-emerald-950);
   --fresh: color-mix(in oklab, var(--color-emerald-500) 16%, transparent);
@@ -295,24 +331,26 @@ body {
 }
 
 [data-theme='dark'] .glass {
-  background: rgba(2, 56, 89, 0.5);
-  border-color: rgba(255, 255, 255, 0.16);
+  background: rgba(35, 42, 52, 0.68);
+  -webkit-backdrop-filter: blur(22px) saturate(140%);
+  backdrop-filter: blur(22px) saturate(140%);
+  border-color: rgba(255, 255, 255, 0.12);
   box-shadow:
     0 14px 36px rgba(0, 0, 0, 0.5),
     0 2px 6px rgba(0, 0, 0, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.22),
-    inset 0 -1px 0 rgba(255, 255, 255, 0.05);
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.04);
 }
 [data-theme='dark'] .glass::before {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0) 46%);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0) 46%);
   mix-blend-mode: normal;
 }
 [data-theme='dark'] .glass-lens {
-  background: rgba(255, 255, 255, 0.16);
-  border-color: rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.18);
   box-shadow:
     0 3px 12px rgba(0, 0, 0, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
 /* Transparencia reducida: el vidrio se vuelve un panel sólido y legible. */
@@ -331,10 +369,12 @@ body {
 }
 @media (prefers-reduced-transparency: reduce) {
   [data-theme='dark'] .glass {
-    background: #023859;
+    background: #232A34;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
   }
   [data-theme='dark'] .glass-lens {
-    background: #164E73;
+    background: #39424F;
   }
 }
 

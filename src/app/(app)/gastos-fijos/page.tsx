@@ -208,7 +208,7 @@ function Section({ title, count, children }: { title: string; count?: number; ch
         <span>{title}</span>
         {count !== undefined && <span>{count}</span>}
       </h2>
-      <div className="divide-y divide-stone-100 rounded-2xl border border-stone-100 bg-white py-1 shadow-[0_2px_16px_rgba(1,28,64,0.08)] dark:divide-stone-800 dark:border-stone-800 dark:bg-stone-900 dark:shadow-none">
+      <div className="divide-y divide-stone-100 rounded-2xl border border-stone-100 bg-white py-1 shadow-[0_2px_16px_rgba(1,28,64,0.08)] dark:divide-stone-800 dark:border-stone-700 dark:bg-stone-900 dark:shadow-none">
         {children}
       </div>
     </section>

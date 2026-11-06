@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Muestra: Noche pizarra y botón +</title>
+<style>
+  * { box-sizing: border-box; }
+  :root { --ease-out: cubic-bezier(0.23, 1, 0.32, 1); --ease-sheet: cubic-bezier(0.32, 0.72, 0, 1); --spring: cubic-bezier(0.34, 1.56, 0.64, 1); font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif; }
+  body { margin: 0; background: #E4E7EB; color: #14181F; }
+  .page { max-width: 1320px; margin: 0 auto; padding: 24px 16px 64px; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  .lead { margin: 0 0 16px; color: #4B5563; font-size: 14px; line-height: 1.5; max-width: 75ch; }
+  .tone { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 22px; font-size: 13px; color: #4B5563; }
+  .seg { display: inline-flex; background: #D1D5DB; border-radius: 999px; padding: 3px; gap: 2px; }
+  .seg button { border: 0; background: transparent; min-height: 36px; padding: 0 14px; border-radius: 999px; font: inherit; font-size: 13.5px; font-weight: 600; color: #374151; cursor: pointer; }
+  .seg button[aria-pressed="true"] { background: #fff; color: #14181F; }
+  .stage { display: flex; flex-wrap: wrap; gap: 28px; justify-content: center; align-items: flex-start; }
+  .col { display: flex; flex-direction: column; gap: 10px; width: 391px; max-width: 100%; }
+  .col-label { font-size: 13px; font-weight: 700; color: #374151; text-align: center; }
+
+  .phone { position: relative; width: 100%; height: 760px; border-radius: 44px; overflow: hidden; border: 8px solid #14181F; background: var(--bg); color: var(--text); isolation: isolate; }
+  .status { height: 44px; display: flex; align-items: center; justify-content: space-between; padding: 0 26px; font-size: 14px; font-weight: 600; color: var(--strong); }
+  .screen { position: absolute; inset: 44px 0 0; overflow: hidden; padding: 4px 16px; }
+  svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+
+  .head { display: flex; align-items: center; justify-content: space-between; margin: 6px 0 14px; }
+  .head h2 { font-size: 18px; font-weight: 600; margin: 0; color: var(--strong); }
+  .head small { font-size: 12.5px; color: var(--muted); }
+  .hero { position: relative; overflow: hidden; background: linear-gradient(135deg, var(--hero1), var(--hero1) 50%, var(--hero2)); color: #fff; border-radius: 24px; padding: 24px 24px 20px; margin-bottom: 12px; }
+  .hero .l { font-size: 12px; color: var(--hero-soft); }
+  .hero .big { font-size: 36px; font-weight: 700; margin: 6px 0 16px; letter-spacing: -.02em; }
+  .hero .bar { height: 8px; border-radius: 99px; background: rgba(255,255,255,.15); overflow: hidden; }
+  .hero .bar i { display: block; height: 100%; width: 72%; background: #6EE7B7; border-radius: 99px; }
+  .hero .foot { display: flex; justify-content: space-between; margin-top: 6px; font-size: 11px; color: var(--hero-soft); }
+  .alert { display: flex; align-items: center; gap: 10px; background: var(--alert-bg); border: 1px solid var(--alert-line); color: var(--alert-text); border-radius: 16px; padding: 12px 14px; font-size: 13.5px; margin-bottom: 12px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; margin-bottom: 12px; overflow: hidden; }
+  .ch { display: flex; align-items: center; gap: 10px; padding: 12px 14px; font-size: 14px; font-weight: 600; color: var(--text); border-bottom: 1px solid var(--divider); }
+  .ico { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; background: var(--icon-bg); color: var(--accent); }
+  .ico svg { width: 15px; height: 15px; }
+  .sec { font-size: 12px; font-weight: 600; color: var(--accent); margin: 2px 2px 8px; }
+  .row { display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 6px 14px; font-size: 14px; color: var(--text); border-top: 1px solid var(--divider); }
+  .row:first-child { border-top: 0; }
+  .row div { flex: 1; min-width: 0; }
+  .row small { display: block; font-size: 12px; color: var(--muted); margin-top: 1px; }
+  .row b { font-weight: 600; color: var(--strong); }
+  .check { width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--muted); background: transparent; padding: 0; display: grid; place-items: center; color: transparent; cursor: pointer; flex-shrink: 0; transition: transform .18s var(--ease-out); }
+  .check:active { transform: scale(.88); }
+  .check[aria-checked="true"] { background: var(--paid); border-color: var(--paid); color: var(--paid-ink); }
+  .check svg { width: 14px; height: 14px; stroke-width: 3; }
+
+  /* Barra: píldora con 4 pestañas y, separado, el + a la misma altura. */
+  .dock { position: absolute; left: 12px; right: 12px; bottom: 12px; display: flex; align-items: center; gap: 8px; z-index: 5; }
+  .tabs { position: relative; flex: 1; min-width: 0; height: 64px; display: grid; grid-template-columns: repeat(4, 1fr); border-radius: 32px; background: var(--glass); border: 1px solid var(--glass-line); -webkit-backdrop-filter: blur(22px) saturate(160%); backdrop-filter: blur(22px) saturate(160%); }
+  .tabs.five { grid-template-columns: repeat(5, 1fr); }
+  .lens { position: absolute; top: 6px; bottom: 6px; left: 0; width: 25%; padding: 0 2px; transition: transform 420ms var(--ease-sheet); pointer-events: none; }
+  .tabs.five .lens { width: 20%; }
+  .lens i { display: block; width: 100%; height: 100%; border-radius: 999px; background: var(--lens); border: 1px solid var(--lens-line); }
+  .tab { position: relative; z-index: 1; border: 0; background: transparent; padding: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font: inherit; font-size: 10.5px; font-weight: 500; color: var(--muted); cursor: pointer; }
+  .tab[aria-current="page"] { font-weight: 600; color: var(--strong); }
+  .tab svg { width: 21px; height: 21px; stroke-width: 1.8; }
+  .plus { width: var(--plus-size, 52px); height: var(--plus-size, 52px); flex: none; border: 0; padding: 0; border-radius: 50%; background: var(--plus); color: var(--plus-ink); display: grid; place-items: center; cursor: pointer; transition: transform .15s var(--ease-out); }
+  .plus:active { transform: scale(.9); }
+  .plus svg { width: 22px; height: 22px; stroke-width: 2.5; transition: transform 380ms var(--spring); }
+  .plus[aria-expanded="true"] svg { transform: rotate(45deg); }
+  .plus-in { width: 48px; height: 48px; justify-self: center; align-self: center; z-index: 1; }
+
+  /* Registro rápido: queda por encima de la barra, y el + (ahora ×) lo cierra. */
+  .scrim { position: absolute; inset: 0; background: rgba(0,0,0,.45); opacity: 0; pointer-events: none; transition: opacity .3s ease; z-index: 3; }
+  .sheet { position: absolute; left: 0; right: 0; bottom: 88px; background: var(--card); border: 1px solid var(--line); border-radius: 24px 24px 20px 20px; margin: 0 8px; padding: 10px 16px 16px; transform: translateY(calc(100% + 100px)); transition: transform 420ms var(--ease-sheet); z-index: 4; }
+  .open .scrim { opacity: 1; pointer-events: auto; }
+  .open .sheet { transform: none; }
+  .grab { width: 36px; height: 5px; border-radius: 9px; background: var(--line); margin: 0 auto 12px; }
+  .sheet h3 { margin: 0 0 10px; font-size: 15px; color: var(--strong); }
+  .amount { height: 56px; display: flex; align-items: center; gap: 8px; padding: 0 14px; border-radius: 14px; background: var(--field); border: 1px solid var(--line); font-size: 26px; font-weight: 700; color: var(--strong); margin-bottom: 12px; }
+  .amount span { font-size: 15px; font-weight: 500; color: var(--muted); }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+  .chip { min-height: 40px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--line); background: transparent; font: inherit; font-size: 13.5px; color: var(--text); cursor: pointer; }
+  .chip[aria-pressed="true"] { background: var(--plus); border-color: var(--plus); color: var(--plus-ink); font-weight: 600; }
+  .save { width: 100%; height: 48px; border: 0; border-radius: 14px; background: var(--plus); color: var(--plus-ink); font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; background: #fff; border-radius: 12px; overflow: hidden; }
+  td { padding: 6px 10px; border-top: 1px solid #E5E7EB; color: #374151; }
+  tr:first-child td { border-top: 0; }
+  td:nth-child(2) { text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; color: #14181F; }
+  td:nth-child(3) { width: 58px; text-align: right; }
+  .ok { color: #047857; font-weight: 600; } .no { color: #B91C1C; font-weight: 600; }
+  @media (prefers-reduced-motion: reduce) { .lens, .sheet, .plus svg { transition-duration: 1ms; } }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>Noche pizarra y botón +</h1>
+  <p class="lead">Fondo pizarra, acento azul acero y el + fuera de la barra, a la misma altura. Toca las pestañas, marca un gasto como pagado y toca el + para abrir el registro rápido (se vuelve × y lo cierra). El modo día solo cambia la barra. El teléfono de la derecha es la noche de hoy, para comparar.</p>
+  <div class="tone">
+    <span>Tono del azul acero:</span>
+    <div class="seg" role="group" aria-label="Tono del azul acero" id="tone"></div>
+    <span>Tamaño del +:</span>
+    <div class="seg" role="group" aria-label="Tamaño del botón +" id="size">
+      <button type="button" aria-pressed="false" data-s="48px">48 px</button>
+      <button type="button" aria-pressed="true" data-s="52px">52 px</button>
+      <button type="button" aria-pressed="false" data-s="56px">56 px</button>
+    </div>
+  </div>
+  <div class="stage" id="stage"></div>
+</div>
+<script>
+const I = {
+  home: '<rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/>',
+  list: '<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>',
+  rec: '<path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M8 8h8M8 12h8"/>',
+  pig: '<path d="M19 9c1 1 2 2 2 4 0 2-1 3-2 4v3h-3v-2H9v2H6v-3c-2-1-3-3-3-6 0-4 4-6 8-6h3l3-2v4Z"/><path d="M15 10h.01"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  check: '<path d="m5 13 4 4L19 7"/>',
+  alert: '<circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/>'
+};
+const svg = (k) => `<svg viewBox="0 0 24 24" aria-hidden="true">${I[k]}</svg>`;
+const tones = [['Más apagado', '#8FA6C1'], ['Medio', '#9FB6D1'], ['Más claro', '#B4C7DE']];
+
+const T = {
+  night: { bg: '#14181F', card: '#1C222B', line: '#3D4757', divider: '#2E3642', text: '#EDEFF2', strong: '#EDEFF2', muted: '#A3ACB8', accent: '#9FB6D1', 'icon-bg': '#2A3340', field: '#14181F', plus: '#9FB6D1', 'plus-ink': '#14181F', paid: '#6EE7B7', 'paid-ink': '#022C22', hero1: '#242C38', hero2: '#364354', 'hero-soft': '#C3CBD6', glass: 'rgba(35,42,52,.68)', 'glass-line': 'rgba(255,255,255,.12)', lens: 'rgba(255,255,255,.12)', 'lens-line': 'rgba(255,255,255,.18)', 'alert-bg': 'rgba(244,63,94,.1)', 'alert-line': 'rgba(244,63,94,.22)', 'alert-text': '#FDA4AF' },
+  day: { bg: '#EDF6F9', card: '#FFFFFF', line: '#DAE6EC', divider: '#ECF3F6', text: '#164E73', strong: '#011C40', muted: '#4A6E85', accent: '#26658C', 'icon-bg': '#DDEFF5', field: '#F5FAFC', plus: '#023859', 'plus-ink': '#FFFFFF', paid: '#047857', 'paid-ink': '#FFFFFF', hero1: '#023859', hero2: '#26658C', 'hero-soft': '#CFE3EC', glass: 'rgba(255,255,255,.72)', 'glass-line': 'rgba(1,28,64,.08)', lens: 'rgba(255,255,255,.9)', 'lens-line': 'rgba(1,28,64,.06)', 'alert-bg': '#FFF1F2', 'alert-line': '#FFE4E6', 'alert-text': '#9F1239' },
+  before: { bg: '#011C40', card: '#023859', line: '#164E73', divider: '#164E73', text: '#ECF3F6', strong: '#ECF3F6', muted: '#A6BCC9', accent: '#A7EBF2', 'icon-bg': '#164E73', field: '#011C40', plus: '#A7EBF2', 'plus-ink': '#011C40', paid: '#6EE7B7', 'paid-ink': '#022C22', hero1: '#023859', hero2: '#26658C', 'hero-soft': '#CFE3EC', glass: 'rgba(2,56,89,.62)', 'glass-line': 'rgba(255,255,255,.16)', lens: 'rgba(255,255,255,.16)', 'lens-line': 'rgba(255,255,255,.28)', 'alert-bg': 'rgba(244,63,94,.1)', 'alert-line': 'rgba(244,63,94,.22)', 'alert-text': '#FDA4AF' }
+};
+
+const row = (name, sub, amt, paid) => `<div class="row"><button class="check" type="button" role="checkbox" aria-checked="${paid}" aria-label="Marcar ${name} como pagado">${svg('check')}</button><div>${name}<small>${sub}</small></div><b>${amt}</b></div>`;
+const plain = (name, sub, amt) => `<div class="row"><div>${name}<small>${sub}</small></div><b>${amt}</b></div>`;
+const screens = [
+  `<div class="head"><h2>Resumen</h2><small>Noviembre 2026</small></div>
+   <div class="hero"><div class="l">Restante este mes</div><div class="big">S/ 1,640.00</div><div class="bar"><i></i></div><div class="foot"><span>Usado: S/ 260.00</span><span>Total: S/ 1,900.00</span></div></div>
+   <div class="alert">${svg('alert')}<span>Vence <b>hoy</b>: Internet — S/ 89.00</span></div>
+   <div class="card"><div class="ch"><span class="ico">${svg('pig')}</span>Ahorros e inversión</div>${plain('Fondo de emergencia', 'Cuenta de ahorros', 'S/ 300.00')}${plain('CTS', 'Depósito', 'S/ 150.00')}</div>`,
+  `<div class="head"><h2>Gastos fijos</h2><small>S/ 1,139.00</small></div>
+   <p class="sec">Por pagar</p><div class="card">${row('Alquiler', 'Día 5', 'S/ 900.00', false)}${row('Internet', 'Vence hoy', 'S/ 89.00', false)}</div>
+   <p class="sec">Pagados</p><div class="card">${row('Luz', 'Día 2', 'S/ 95.00', true)}${row('Agua', 'Día 2', 'S/ 55.00', true)}</div>`,
+  `<div class="head"><h2>Gastos variables</h2><small>S/ 260.00</small></div>
+   <div class="card">${plain('Supermercado', 'Hoy · Tarjeta', 'S/ 142.50')}${plain('Almuerzo', 'Ayer · Yape', 'S/ 28.00')}${plain('Taxi', '2 nov · Efectivo', 'S/ 18.00')}${plain('Farmacia', '1 nov · Tarjeta', 'S/ 71.50')}</div>`,
+  `<div class="head"><h2>Ahorros</h2><small>S/ 18,450.00</small></div>
+   <div class="hero"><div class="l">Patrimonio total</div><div class="big">S/ 18,450.00</div><div class="foot"><span>4 cuentas</span><span>Soles y dólares</span></div></div>
+   <div class="card">${plain('Cuenta de ahorros', 'Soles', 'S/ 9,200.00')}${plain('CTS', 'Soles', 'S/ 6,100.00')}${plain('Fondo mutuo', 'Dólares', '$ 840.00')}</div>`
+];
+const tabDefs = [['home', 'Resumen'], ['list', 'Fijos'], ['rec', 'Variables'], ['pig', 'Ahorros']];
+
+function phone(key, label, old) {
+  const col = document.createElement('div');
+  col.className = 'col';
+  const tabs = tabDefs.map(([ic, name], i) => `<button class="tab" type="button" data-i="${i}" ${i === 0 ? 'aria-current="page"' : ''}>${svg(ic)}${name}</button>`);
+  const plusBtn = (cls) => `<button class="plus ${cls}" type="button" aria-label="Registrar gasto" aria-expanded="false">${svg('plus')}</button>`;
+  if (old) tabs.splice(2, 0, plusBtn('plus-in'));
+  col.innerHTML = `<div class="col-label">${label}</div>
+    <div class="phone" data-key="${key}">
+      <div class="status"><span>9:41</span><span>●●●</span></div>
+      <div class="screen"></div>
+      <div class="scrim"></div>
+      <div class="sheet"><div class="grab"></div><h3>Registrar gasto</h3>
+        <div class="amount"><span>S/</span>0.00</div>
+        <div class="chips">${['Comida', 'Transporte', 'Salud', 'Otros'].map((c) => `<button class="chip" type="button" aria-pressed="false">${c}</button>`).join('')}</div>
+        <button class="save" type="button">Guardar</button></div>
+      <div class="dock"><div class="tabs ${old ? 'five' : ''}"><div class="lens"><i></i></div>${tabs.join('')}</div>${old ? '' : plusBtn('')}</div>
+    </div>
+    <table data-table></table>`;
+  const p = col.querySelector('.phone');
+  const screen = p.querySelector('.screen');
+  const lens = p.querySelector('.lens');
+  const plus = p.querySelector('.plus');
+  const go = (i) => {
+    screen.innerHTML = screens[i];
+    p.querySelectorAll('.tab').forEach((t) => t.dataset.i == i ? t.setAttribute('aria-current', 'page') : t.removeAttribute('aria-current'));
+    const slot = old && i >= 2 ? i + 1 : i;
+    lens.style.transform = `translateX(${slot * 100}%)`;
+  };
+  const toggle = (open) => { p.classList.toggle('open', open); plus.setAttribute('aria-expanded', open); };
+  p.addEventListener('click', (e) => {
+    const t = e.target.closest('.tab'), c = e.target.closest('.check'), ch = e.target.closest('.chip');
+    if (t) { toggle(false); go(+t.dataset.i); }
+    if (c) c.setAttribute('aria-checked', c.getAttribute('aria-checked') !== 'true');
+    if (ch) { p.querySelectorAll('.chip').forEach((x) => x.setAttribute('aria-pressed', x === ch)); }
+    if (e.target.closest('.plus')) toggle(!p.classList.contains('open'));
+    if (e.target.closest('.scrim') || e.target.closest('.save')) toggle(false);
+  });
+  go(0);
+  paint(col, key);
+  return col;
+}
+
+const lum = (h) => { const c = [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255).map((v) => v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4); return .2126 * c[0] + .7152 * c[1] + .0722 * c[2]; };
+const ratio = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + .05) / (y + .05); };
+
+function paint(col, key) {
+  const t = T[key];
+  const p = col.querySelector('.phone');
+  Object.entries(t).forEach(([k, v]) => p.style.setProperty('--' + k, v));
+  const lines = [['Texto sobre tarjeta', t.text, t.card, 4.5], ['Texto gris sobre tarjeta', t.muted, t.card, 4.5], ['Acento sobre tarjeta', t.accent, t.card, 4.5], ['Texto gris sobre fondo', t.muted, t.bg, 4.5], ['Ícono del + sobre el botón', t['plus-ink'], t.plus, 3], ['Botón + sobre fondo', t.plus, t.bg, 3], ['Verde de pagado sobre tarjeta', t.paid, t.card, 3], ['Texto suave sobre tarjeta principal', t['hero-soft'], t.hero1, 4.5]];
+  col.querySelector('[data-table]').innerHTML = lines.map(([n, a, b, min]) => { const r = ratio(a, b); return `<tr><td>${n}</td><td>${r.toFixed(1)}:1</td><td class="${r >= min ? 'ok' : 'no'}">${r >= min ? 'Pasa' : 'Falla'}</td></tr>`; }).join('');
+}
+
+const stage = document.getElementById('stage');
+const nightCol = phone('night', 'Noche nueva', false);
+stage.append(nightCol, phone('day', 'Día con la barra nueva', false), phone('before', 'Noche de hoy', true));
+
+const sizeEl = document.getElementById('size');
+sizeEl.addEventListener('click', (e) => {
+  const b = e.target.closest('button');
+  if (!b) return;
+  sizeEl.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', x === b));
+  document.documentElement.style.setProperty('--plus-size', b.dataset.s);
+});
+
+const toneEl = document.getElementById('tone');
+toneEl.innerHTML = tones.map(([n, h], i) => `<button type="button" aria-pressed="${i === 1}" data-h="${h}">${n}</button>`).join('');
+toneEl.addEventListener('click', (e) => {
+  const b = e.target.closest('button');
+  if (!b) return;
+  toneEl.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', x === b));
+  T.night.accent = T.night.plus = b.dataset.h;
+  paint(nightCol, 'night');
+});
+</script>
+</body>
+</html>

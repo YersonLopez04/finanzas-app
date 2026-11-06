@@ -63,7 +63,7 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center">
-      <div className="bg-white dark:bg-stone-900 rounded-2xl border border-stone-200 dark:border-stone-800 shadow-sm dark:shadow-none p-8 w-full max-w-sm">
+      <div className="bg-white dark:bg-stone-900 rounded-2xl border border-stone-200 dark:border-stone-700 shadow-sm dark:shadow-none p-8 w-full max-w-sm">
         <div className="mb-8">
           <h1 className="text-xl font-semibold text-stone-800 dark:text-stone-100">Finanzas</h1>
           <p className="text-sm text-stone-500 dark:text-stone-400 mt-1">

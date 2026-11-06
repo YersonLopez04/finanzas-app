@@ -239,7 +239,7 @@ export default function DashboardPage() {
       {isCurrentMonth && pendingFixed.length > 0 && (
         <Link
           href="/gastos-fijos"
-          className="motion-pop flex items-center justify-between gap-3 bg-stone-50 dark:bg-stone-800/50 border border-stone-100 dark:border-stone-800 rounded-2xl px-5 py-3.5 hover:bg-stone-100/60 dark:hover:bg-stone-800 transition-colors"
+          className="motion-pop flex items-center justify-between gap-3 bg-stone-50 dark:bg-stone-800/50 border border-stone-100 dark:border-stone-700 rounded-2xl px-5 py-3.5 hover:bg-stone-100/60 dark:hover:bg-stone-800 transition-colors"
         >
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-full bg-stone-100 dark:bg-stone-800 flex items-center justify-center shrink-0">
